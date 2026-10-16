@@ -1,0 +1,19 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouvel utilisateur' : 'Modifier ' ~ user.fullName }}{% endblock %}
+
+{% block page_actions %}<a class="ghost" href="{{ path('app_admin_users') }}">← Retour à la liste</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.fullName) }}
+            {{ form_row(form.email) }}
+            {{ form_row(form.role) }}
+            {{ form_row(form.plainPassword) }}
+            {{ form_row(form.active) }}
+            <button class="btn" type="submit">{{ isNew ? 'Créer l\'utilisateur' : 'Enregistrer' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

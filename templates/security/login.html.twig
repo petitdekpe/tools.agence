@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion · {{ site_settings().headerTitle }}{% endblock %}
+{% block body_class %}page-login{% endblock %}
+{% block header %}{% endblock %}
+
+{% block body %}
+    <div class="login-card">
+        {% if site_settings().logoPath %}<img class="login-logo" src="{{ asset('uploads/' ~ site_settings().logoPath) }}" alt="">{% endif %}
+        <h1>{{ site_settings().headerTitle }}</h1>
+        <p class="muted">Connectez-vous avec votre e-mail professionnel et le code de Google Authenticator.</p>
+
+        <form method="post" class="form">
+            {% if error %}<div class="alert error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>{% endif %}
+            {% for message in app.flashes('success') %}<div class="alert success">{{ message }}</div>{% endfor %}
+
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" value="{{ last_username }}" autocomplete="username" required autofocus>
+
+            <label for="code">Code Google Authenticator</label>
+            <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" placeholder="123 456" class="code-input">
+
+            <details class="pwd-toggle"{{ error ? ' open' }}>
+                <summary>Utiliser un mot de passe</summary>
+                <p class="muted small-note">Pour une première connexion, saisissez le mot de passe initial et laissez le code vide.</p>
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" autocomplete="current-password">
+            </details>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <button class="btn" type="submit">Se connecter</button>
+        </form>
+    </div>
+{% endblock %}

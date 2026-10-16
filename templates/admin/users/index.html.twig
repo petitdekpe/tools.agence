@@ -1,0 +1,68 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Utilisateurs{% endblock %}
+
+{% block page_actions %}
+    {% if is_granted('ROLE_ADMIN') %}
+        <a class="btn" href="{{ path('app_admin_user_new') }}">+ Nouvel utilisateur</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="table-card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>2FA</th>
+                    <th>Dernière connexion</th>
+                    {% if is_granted('ROLE_ADMIN') %}<th class="right">Actions</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+                <tr class="{{ u.active ? '' : 'inactive' }}">
+                    <td>
+                        <div class="who">
+                            <span class="avatar-circle">{{ u.fullName|slice(0, 1)|upper }}</span>
+                            <div><strong>{{ u.fullName }}</strong>{% if u == app.user %} <small>(vous)</small>{% endif %}<small>{{ u.email }}</small></div>
+                        </div>
+                    </td>
+                    <td><span class="role role-{{ u.role|lower|replace({'role_': ''}) }}">{{ u.roleLabel }}</span></td>
+                    <td><span class="status-dot {{ u.active ? 'on' : 'off' }}">{{ u.active ? 'Actif' : 'Désactivé' }}</span></td>
+                    <td><span class="status-dot {{ u.hasTwoFactor ? 'on' : 'wait' }}">{{ u.hasTwoFactor ? 'Activé' : 'À activer' }}</span></td>
+                    <td class="muted">{{ u.lastLoginAt ? u.lastLoginAt|date('d/m/Y H:i') : 'Jamais' }}</td>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <td class="right">
+                            <div class="row-actions">
+                                <a class="ghost" href="{{ path('app_admin_user_edit', {id: u.id}) }}">Modifier</a>
+                                <a class="ghost" href="{{ path('app_admin_activity', {user: u.id}) }}">Activité</a>
+                                {% if u != app.user %}
+                                    {% if u.hasTwoFactor %}
+                                        <form method="post" action="{{ path('app_admin_user_reset2fa', {id: u.id}) }}"
+                                              onsubmit="return confirm('Réinitialiser Google Authenticator de {{ u.fullName|e('js') }} ?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
+                                            <button class="ghost" type="submit">Réinit. 2FA</button>
+                                        </form>
+                                    {% endif %}
+                                    <form method="post" action="{{ path('app_admin_user_toggle', {id: u.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
+                                        <button class="ghost" type="submit">{{ u.active ? 'Désactiver' : 'Réactiver' }}</button>
+                                    </form>
+                                    <form method="post" action="{{ path('app_admin_user_delete', {id: u.id}) }}"
+                                          onsubmit="return confirm('Supprimer {{ u.fullName|e('js') }} et tout son historique ?')">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
+                                        <button class="ghost danger" type="submit">Supprimer</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

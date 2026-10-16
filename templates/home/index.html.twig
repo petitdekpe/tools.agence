@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <section class="cards">
+        {% for tool in tools %}
+            <a class="card" href="{{ path(tool.route) }}">
+                <div class="card-top">
+                    <span class="card-icon tone-{{ tool.color }}">{{ tool.icon }}</span>
+                    <span class="card-arrow" aria-hidden="true">↗</span>
+                </div>
+                <h2>{{ tool.title }}{% if tool.badge %} <span class="badge">{{ tool.badge }}</span>{% endif %}</h2>
+                <p>{{ tool.description }}</p>
+                <span class="card-cta">Ouvrir l'outil</span>
+            </a>
+        {% endfor %}
+    </section>
+{% endblock %}

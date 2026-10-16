@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Correcteur média · {{ site_settings().headerTitle }}{% endblock %}
+{% block main_class %} container-full{% endblock %}
+{% block body_class %}page-full{% endblock %}
+
+{% block body %}
+    <div class="app"
+         data-controller="correcteur"
+         data-correcteur-api-value="{{ path('app_correcteur_list') }}"
+         data-correcteur-token-value="{{ csrf_token('correcteur') }}">
+
+        <aside class="app-side">
+            <div class="app-side-head">
+                <span class="tool-logo">✍️</span>
+                <strong>Correcteur média</strong>
+                <span class="badge">IA</span>
+            </div>
+            <button type="button" class="btn-dark" data-action="correcteur#newChat">+ Nouvelle correction</button>
+            <div class="side-label">Historique</div>
+            <ul class="history" data-correcteur-target="list"></ul>
+            <a class="side-back" href="{{ path('app_home') }}">← Tous les outils</a>
+        </aside>
+
+        <section class="app-main">
+            <div class="app-bar">
+                <span class="crumbs">Correcteur média <span data-correcteur-target="crumb"></span></span>
+            </div>
+
+            <div class="thread" data-correcteur-target="thread"></div>
+
+            <form class="composer" data-action="submit->correcteur#submit">
+                <textarea data-correcteur-target="input" rows="3" maxlength="20000"
+                          placeholder="Collez un post ou le texte d'un visuel à relire…"
+                          data-action="keydown->correcteur#keydown"></textarea>
+                <div class="composer-foot">
+                    <span class="hint" data-correcteur-target="status">Ctrl + Entrée pour envoyer</span>
+                    <button type="submit" class="send" data-correcteur-target="send" aria-label="Relire">➤</button>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

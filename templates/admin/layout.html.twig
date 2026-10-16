@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% block page_title %}Administration{% endblock %} · {{ site_settings().headerTitle }}{% endblock %}
+{% block header %}{% endblock %}
+{% block main_class %} container-full{% endblock %}
+
+{% block body %}
+    {% set route = app.request.attributes.get('_route') %}
+    <div class="adm">
+        <aside class="adm-side">
+            <a class="adm-brand" href="{{ path('app_home') }}">
+                {% if site_settings().logoPath %}
+                    <img src="{{ asset('uploads/' ~ site_settings().logoPath) }}" alt="">
+                {% else %}
+                    <span class="adm-brand-mark">{{ site_settings().headerTitle|slice(0, 1)|upper }}</span>
+                {% endif %}
+                <strong>{{ site_settings().headerTitle }}</strong>
+            </a>
+
+            <nav class="adm-nav">
+                <a href="{{ path('app_admin') }}" class="{{ route == 'app_admin' ? 'active' }}"><i>▦</i> Tableau de bord</a>
+                <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}"><i>☺</i> Utilisateurs</a>
+                <a href="{{ path('app_admin_activity') }}" class="{{ route == 'app_admin_activity' ? 'active' }}"><i>☰</i> Journal d'activité</a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}"><i>⚙</i> Réglages du site</a>
+                {% endif %}
+                <span class="adm-nav-label">Outils</span>
+                <a href="{{ path('app_home') }}"><i>←</i> Retour au site</a>
+            </nav>
+
+            <div class="adm-me">
+                <span class="avatar-circle">{{ app.user.fullName|slice(0, 1)|upper }}</span>
+                <div>
+                    <strong>{{ app.user.fullName }}</strong>
+                    <small>{{ app.user.roleLabel }}</small>
+                </div>
+                <a href="{{ path('app_logout') }}" title="Se déconnecter" class="adm-logout">⏻</a>
+            </div>
+        </aside>
+
+        <div class="adm-main">
+            <div class="adm-top">
+                <h1>{{ block('page_title') }}</h1>
+                <div class="adm-actions">{% block page_actions %}{% endblock %}</div>
+            </div>
+
+            {% for type in ['success', 'error'] %}
+                {% for message in app.flashes(type) %}<div class="alert {{ type }}">{{ message }}</div>{% endfor %}
+            {% endfor %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+{% endblock %}

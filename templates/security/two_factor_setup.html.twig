@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Activer l'authentification · {{ site_settings().headerTitle }}{% endblock %}
+{% block body_class %}page-login{% endblock %}
+{% block header %}{% endblock %}
+
+{% block body %}
+    <div class="login-card wide">
+        <h1>Activez Google Authenticator</h1>
+        <p class="muted">L'authentification à double facteur est obligatoire. Cette étape est à faire une seule fois.</p>
+
+        <ol class="steps">
+            <li>Installez <strong>Google Authenticator</strong> sur votre téléphone.</li>
+            <li>Scannez ce QR code (« + » puis « Scanner un code QR »).</li>
+            <li>Saisissez le code à 6 chiffres affiché.</li>
+        </ol>
+
+        <div class="qr"><img src="{{ qr }}" alt="QR code à scanner" width="200" height="200"></div>
+        <p class="muted center">Impossible de scanner ? Saisissez cette clé :<br><code class="secret">{{ secret }}</code></p>
+
+        <form method="post" class="form">
+            {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+            <label for="code">Code à 6 chiffres</label>
+            <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" placeholder="123 456" class="code-input" required autofocus>
+            <input type="hidden" name="_token" value="{{ csrf_token('totp_setup') }}">
+            <button class="btn" type="submit">Activer et continuer</button>
+        </form>
+        <p class="center"><a class="muted" href="{{ path('app_logout') }}">Se déconnecter</a></p>
+    </div>
+{% endblock %}

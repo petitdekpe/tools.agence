@@ -1,0 +1,55 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+    <section class="kpis">
+        <div class="kpi">
+            <span class="kpi-label">Utilisateurs</span>
+            <strong>{{ totalUsers }}</strong>
+            <small>{{ activeUsers }} actif{{ activeUsers > 1 ? 's' }}</small>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Corrections</span>
+            <strong>{{ totalCorrections }}</strong>
+            <small>depuis le début</small>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Corrections (7 jours)</span>
+            <strong>{{ weekCorrections }}</strong>
+            <small>sur la dernière semaine</small>
+        </div>
+    </section>
+
+    <section class="panels">
+        <div class="panel">
+            <h2>Répartition par rôle</h2>
+            {% for role, label in roleLabels %}
+                {% set n = byRole[role] %}
+                <div class="bar-row">
+                    <span>{{ label }}</span>
+                    <div class="bar"><div class="bar-fill role-{{ role|lower|replace({'role_': ''}) }}" style="width: {{ totalUsers ? (n / totalUsers * 100)|round : 0 }}%"></div></div>
+                    <strong>{{ n }}</strong>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="panel">
+            <h2>Utilisateurs les plus actifs</h2>
+            {% for u in topUsers %}
+                <div class="line"><div><strong>{{ u.name }}</strong><small>{{ u.email }}</small></div><span class="pill">{{ u.n }} correction{{ u.n > 1 ? 's' }}</span></div>
+            {% else %}
+                <p class="muted">Aucune correction pour le moment.</p>
+            {% endfor %}
+        </div>
+
+        <div class="panel">
+            <h2>Dernières connexions</h2>
+            {% for u in recentLogins %}
+                <div class="line"><div><strong>{{ u.fullName }}</strong><small>{{ u.roleLabel }}</small></div><span class="muted">{{ u.lastLoginAt|date('d/m/Y H:i') }}</span></div>
+            {% else %}
+                <p class="muted">Aucune connexion enregistrée.</p>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

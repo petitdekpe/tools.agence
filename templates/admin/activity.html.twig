@@ -1,0 +1,80 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Journal d'activité{% endblock %}
+
+{% macro value(v) %}
+    {%- if v is iterable -%}
+        <ul class="kv">{% for k, x in v %}<li><em>{{ k }}</em> {{ _self.value(x) }}</li>{% endfor %}</ul>
+    {%- elseif v is same as(true) -%}oui
+    {%- elseif v is same as(false) -%}non
+    {%- elseif v is null -%}<span class="muted">—</span>
+    {%- else -%}<span class="kv-text">{{ v }}</span>
+    {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+    <form method="get" class="filters">
+        <select name="user" aria-label="Utilisateur">
+            <option value="">Tous les utilisateurs</option>
+            {% for u in users %}<option value="{{ u.id }}" {{ filters.user == u.id ? 'selected' }}>{{ u.fullName }}</option>{% endfor %}
+        </select>
+        <select name="category" aria-label="Catégorie">
+            <option value="">Toutes les catégories</option>
+            {% for key, label in categories %}<option value="{{ key }}" {{ filters.category == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="action" aria-label="Action">
+            <option value="">Toutes les actions</option>
+            {% for key, label in actions %}<option value="{{ key }}" {{ filters.action == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <input type="date" name="from" value="{{ filters.from }}" aria-label="Du">
+        <input type="date" name="to" value="{{ filters.to }}" aria-label="Au">
+        <button class="btn" type="submit">Filtrer</button>
+        <a class="ghost" href="{{ path('app_admin_activity') }}">Réinitialiser</a>
+    </form>
+
+    <p class="muted">{{ total }} entrée{{ total > 1 ? 's' }}</p>
+
+    <div class="table-card">
+        <table class="table">
+            <thead>
+                <tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Détails</th><th>IP</th></tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td class="nowrap">{{ log.createdAt|date('d/m/Y H:i:s') }}</td>
+                    <td>
+                        {% if log.user %}
+                            <a href="{{ path('app_admin_activity', {user: log.user.id}) }}"><strong>{{ log.user.fullName }}</strong></a>
+                            <small class="block muted">{{ log.userEmail }}</small>
+                        {% else %}
+                            <span class="muted">{{ log.userEmail ?: 'Inconnu' }}</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="act act-{{ log.category }}">{{ log.label }}</span></td>
+                    <td>
+                        {% if log.details %}
+                            <details class="log-details">
+                                <summary>Voir</summary>
+                                {{ _self.value(log.details) }}
+                            </details>
+                        {% else %}<span class="muted">—</span>{% endif %}
+                    </td>
+                    <td class="muted nowrap">{{ log.ip }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">Aucune action enregistrée pour ces filtres.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = app.request.query.all %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_admin_activity', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_admin_activity', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}
