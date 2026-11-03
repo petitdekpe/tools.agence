@@ -2,7 +2,9 @@
 
 namespace App\Command;
 
+use App\Entity\Role;
 use App\Entity\User;
+use App\Repository\RoleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -16,9 +18,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 #[AsCommand(name: 'app:create-user', description: 'Crée ou met à jour un utilisateur')]
 class CreateUserCommand extends Command
 {
-    private const ROLES = ['agent' => User::ROLE_AGENT, 'admin' => User::ROLE_ADMIN, 'direction' => User::ROLE_DIRECTION];
-
-    public function __construct(private readonly EntityManagerInterface $em, private readonly UserPasswordHasherInterface $hasher)
+    public function __construct(private readonly EntityManagerInterface $em, private readonly UserPasswordHasherInterface $hasher, private readonly RoleRepository $roles)
     {
         parent::__construct();
     }
@@ -30,15 +30,15 @@ class CreateUserCommand extends Command
             ->addArgument('password', InputArgument::REQUIRED)
             ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Nom complet')
             ->addOption('reset-2fa', null, InputOption::VALUE_NONE, 'Réinitialise Google Authenticator')
-            ->addOption('role', null, InputOption::VALUE_REQUIRED, 'agent, admin ou direction', 'admin');
+            ->addOption('role', null, InputOption::VALUE_REQUIRED, 'Code du rôle : agent, admin, direction ou celui d\'un rôle créé (ex. chef_de_projet)', 'admin');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $role = self::ROLES[$input->getOption('role')] ?? null;
+        $role = $this->findRole((string) $input->getOption('role'));
         if (!$role) {
-            $io->error('Rôle invalide : utilisez agent, admin ou direction.');
+            $io->error(sprintf('Rôle inconnu. Rôles disponibles : %s.', implode(', ', array_map(static fn (Role $r): string => strtolower(substr($r->getCode(), 5)), $this->roles->findAllOrdered()))));
 
             return Command::INVALID;
         }
@@ -63,5 +63,13 @@ class CreateUserCommand extends Command
         $io->success(sprintf('%s enregistré (%s).', $email, $user->getRoleLabel()));
 
         return Command::SUCCESS;
+    }
+
+    /** Accepte « agent » ou « ROLE_AGENT », sans tenir compte de la casse. */
+    private function findRole(string $name): ?Role
+    {
+        $code = strtoupper(trim($name));
+
+        return $this->roles->findOneByCode(str_starts_with($code, 'ROLE_') ? $code : 'ROLE_'.$code);
     }
 }

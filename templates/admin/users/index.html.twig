@@ -9,6 +9,16 @@
 {% endblock %}
 
 {% block content %}
+    <form method="get" class="filters user-filters">
+        <select name="role" aria-label="Rôle" onchange="this.form.submit()">
+            <option value="">Tous les rôles</option>
+            {% for r in roles %}<option value="{{ r.id }}" {{ role and role.id == r.id ? 'selected' }}>{{ r.label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn" type="submit">Filtrer</button></noscript>
+        {% if role %}<a class="ghost" href="{{ path('app_admin_users') }}">Réinitialiser</a>{% endif %}
+        <span class="muted">{{ users|length }} utilisateur{{ users|length > 1 ? 's' }}</span>
+    </form>
+
     <div class="table-card">
         <table class="table">
             <thead>
@@ -30,7 +40,7 @@
                             <div><strong>{{ u.fullName }}</strong>{% if u == app.user %} <small>(vous)</small>{% endif %}<small>{{ u.email }}</small></div>
                         </div>
                     </td>
-                    <td><span class="role role-{{ u.role|lower|replace({'role_': ''}) }}">{{ u.roleLabel }}</span></td>
+                    <td><span class="role role-{{ u.role.code|lower|replace({'role_': ''}) }}">{{ u.roleLabel }}</span></td>
                     <td><span class="status-dot {{ u.active ? 'on' : 'off' }}">{{ u.active ? 'Actif' : 'Désactivé' }}</span></td>
                     <td><span class="status-dot {{ u.hasTwoFactor ? 'on' : 'wait' }}">{{ u.hasTwoFactor ? 'Activé' : 'À activer' }}</span></td>
                     <td class="muted">{{ u.lastLoginAt ? u.lastLoginAt|date('d/m/Y H:i') : 'Jamais' }}</td>

@@ -1,0 +1,95 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}{{ item.designation }}{% endblock %}
+{% block tool_actions %}
+    <a class="ghost" href="{{ path('app_materiel') }}">← Retour à l'inventaire</a>
+    {% if is_granted('materiel.edit') %}<a class="btn" href="{{ path('app_materiel_edit', {id: item.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if open and not open.personnel.active %}
+        <div class="banner bad"><span><strong>Détenteur parti</strong> : {{ open.personnel.fullName }} a quitté l'entreprise. Ce matériel est à récupérer.</span></div>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>Fiche</h2>
+            <dl class="facts">
+                <div><dt>Catégorie</dt><dd>{{ item.categoryLabel }}</dd></div>
+                <div><dt>Référence</dt><dd>{{ item.reference ?: '—' }}</dd></div>
+                <div><dt>État</dt><dd>{{ item.etatLabel }}</dd></div>
+                <div><dt>Date d'achat</dt><dd>{{ item.purchasedAt ? item.purchasedAt|date('d/m/Y') : '—' }}</dd></div>
+                <div><dt>Valeur d'achat</dt><dd>{{ item.purchaseValue is not null ? item.purchaseValue|fcfa : '—' }}</dd></div>
+                {% if item.observation %}<div><dt>Observation</dt><dd class="kv-text">{{ item.observation }}</dd></div>{% endif %}
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2>Détenteur actuel</h2>
+            {% if open %}
+                <dl class="facts">
+                    <div><dt>Remis à</dt><dd>
+                        {% if is_granted('personnel.view') %}<a href="{{ path('app_personnel_show', {id: open.personnel.id}) }}"><strong>{{ open.personnel.fullName }}</strong></a>{% else %}<strong>{{ open.personnel.fullName }}</strong>{% endif %}
+                    </dd></div>
+                    <div><dt>Depuis le</dt><dd>{{ open.assignedAt|date('d/m/Y') }}</dd></div>
+                    {% if open.note %}<div><dt>Observation</dt><dd class="kv-text">{{ open.note }}</dd></div>{% endif %}
+                </dl>
+                {% if returnForm %}
+                    <h3>Restituer</h3>
+                    {{ form_start(returnForm, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
+                        {{ form_errors(returnForm) }}
+                        {{ form_row(returnForm.returnedAt) }}
+                        {{ form_row(returnForm.etat) }}
+                        {{ form_row(returnForm.note) }}
+                        <button class="btn" type="submit">Enregistrer la restitution</button>
+                    {{ form_end(returnForm) }}
+                {% endif %}
+            {% elseif item.reformed %}
+                <p class="muted">Matériel réformé : il ne peut plus être remis.</p>
+            {% else %}
+                <p><span class="chip chip-ok">Disponible</span></p>
+                {% if assignForm %}
+                    <h3>Remettre à une personne</h3>
+                    {{ form_start(assignForm, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
+                        {{ form_errors(assignForm) }}
+                        {{ form_row(assignForm.personnel) }}
+                        {{ form_row(assignForm.assignedAt) }}
+                        {{ form_row(assignForm.note) }}
+                        <button class="btn" type="submit">Enregistrer la remise</button>
+                    {{ form_end(assignForm) }}
+                {% endif %}
+            {% endif %}
+        </section>
+    </div>
+
+    <h2>Historique des affectations</h2>
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead><tr><th>Personne</th><th>Remis le</th><th>Rendu le</th><th>État au retour</th><th>Observations</th></tr></thead>
+            <tbody>
+            {% for a in item.affectations %}
+                <tr>
+                    <td>
+                        {% if is_granted('personnel.view') %}<a href="{{ path('app_personnel_show', {id: a.personnel.id}) }}">{{ a.personnel.fullName }}</a>{% else %}{{ a.personnel.fullName }}{% endif %}
+                        {% if a.assignedBy %}<small class="block muted">remis par {{ a.assignedBy.fullName }}</small>{% endif %}
+                    </td>
+                    <td class="nowrap">{{ a.assignedAt|date('d/m/Y') }}</td>
+                    <td class="nowrap">{% if a.returnedAt %}{{ a.returnedAt|date('d/m/Y') }}{% else %}<span class="chip chip-info">En cours</span>{% endif %}</td>
+                    <td>{{ a.returnEtatLabel ?: '—' }}</td>
+                    <td class="obs">{% if a.note %}Remise : {{ a.note }}{% endif %}{% if a.returnNote %}<br>Retour : {{ a.returnNote }}{% endif %}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">Jamais affecté.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_granted('materiel.delete') and not open %}
+        <form method="post" action="{{ path('app_materiel_delete', {id: item.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer {{ item.designation|e('js') }} de l\'inventaire ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('materiel_' ~ item.id) }}">
+            <button class="ghost danger" type="submit">Supprimer ce matériel</button>
+        </form>
+    {% endif %}
+{% endblock %}

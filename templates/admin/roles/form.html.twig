@@ -1,0 +1,49 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouveau rôle' : (locked ? 'Rôle ' ~ role.label : 'Modifier le rôle ' ~ role.label) }}{% endblock %}
+
+{% block page_actions %}<a class="ghost" href="{{ path('app_admin_roles') }}">← Retour aux rôles</a>{% endblock %}
+
+{% block content %}
+    {% if isNew %}
+        <form method="get" action="{{ path('app_admin_role_new') }}" class="role-model">
+            <label for="copier">Partir des permissions de</label>
+            <select id="copier" name="copier">
+                <option value="">Aucun : repartir de zéro</option>
+                {% for m in models %}{% if not m.admin %}<option value="{{ m.id }}" {{ model and model.id == m.id ? 'selected' }}>{{ m.label }}</option>{% endif %}{% endfor %}
+            </select>
+            <button class="ghost" type="submit">Précocher</button>
+        </form>
+    {% endif %}
+
+    <div class="panel role-panel">
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.label) }}
+            {{ form_row(form.description) }}
+
+            <h2 class="role-perm-title">Permissions</h2>
+            {% if locked %}
+                <p class="muted">Le rôle Admin a toutes les permissions et ne peut pas être restreint. Seuls son nom et sa description se modifient.</p>
+            {% else %}
+                <p class="muted">Cochez ce que ce rôle peut faire. Accorder une action d'un outil donne aussi l'accès à cet outil.{% if not isNew and users > 0 %} Les changements s'appliquent tout de suite aux {{ users }} utilisateur{{ users > 1 ? 's' }} concerné{{ users > 1 ? 's' }}.{% endif %}</p>
+            {% endif %}
+
+            <section class="perm-groups">
+                {% for group, items in catalog %}
+                    <fieldset class="perm-box">
+                        <legend>{{ group }}</legend>
+                        {% for key, label in items %}
+                            <label class="perm-line">
+                                <input type="checkbox" name="permissions[]" value="{{ key }}" {{ locked or key in checked ? 'checked' }} {{ locked ? 'disabled' }}>
+                                <span>{{ label }}</span>
+                            </label>
+                        {% endfor %}
+                    </fieldset>
+                {% endfor %}
+            </section>
+
+            <button class="btn" type="submit">{{ isNew ? 'Créer le rôle' : 'Enregistrer' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

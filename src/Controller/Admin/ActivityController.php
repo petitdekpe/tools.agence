@@ -4,17 +4,20 @@ namespace App\Controller\Admin;
 
 use App\Entity\ActivityLog;
 use App\Entity\User;
+use App\Security\Permission;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-/** Journal des actions : consultable par l'admin et la direction. */
+/** Journal des actions : consultable par les rôles qui ont la permission « activity.view ». */
 class ActivityController extends AbstractController
 {
     private const PER_PAGE = 50;
 
+    #[IsGranted(Permission::ACTIVITY_VIEW)]
     #[Route('/admin/activity', name: 'app_admin_activity', methods: 'GET')]
     public function index(Request $request, EntityManagerInterface $em): Response
     {

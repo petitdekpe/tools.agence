@@ -22,7 +22,7 @@
             </a>
             {% if app.user %}
                 <nav class="header-nav">
-                    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_DIRECTION') %}
+                    {% if is_granted('admin.access') %}
                         <a href="{{ path('app_admin') }}">Administration</a>
                     {% endif %}
                     <span class="header-user">{{ app.user.fullName }} <small>{{ app.user.roleLabel }}</small></span>

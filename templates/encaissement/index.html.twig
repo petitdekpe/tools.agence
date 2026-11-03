@@ -1,0 +1,140 @@
+{% extends 'encaissement/layout.html.twig' %}
+
+{% block page_title %}Suivi des encaissements{% endblock %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_encaissements', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% macro coherence(ecart) %}
+    {%- if ecart == 0 -%}<span class="chip chip-ok">OK</span>
+    {%- elseif ecart > 0 -%}<span class="chip chip-warn">Écart de {{ ecart|fcfa }}</span>
+    {%- else -%}<span class="chip chip-bad">Dépassement de {{ (-ecart)|fcfa }}</span>
+    {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Rechercher un client…" aria-label="Rechercher un client">
+        <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
+        <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>
+        <select name="client" aria-label="Client">
+            <option value="">Tous les clients</option>
+            {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+        </select>
+        <select name="nature" aria-label="Nature">
+            <option value="">Toutes les natures</option>
+            {% for key, label in natures %}<option value="{{ key }}" {{ filter.nature == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="mode" aria-label="Mode de paiement">
+            <option value="">Tous les modes</option>
+            {% for key, label in modes %}<option value="{{ key }}" {{ filter.mode == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="coherence" aria-label="Cohérence">
+            <option value="">Toute cohérence</option>
+            {% for key, label in coherences %}<option value="{{ key }}" {{ filter.coherence == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_encaissements') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} encaissement{{ total > 1 ? 's' }}{% if filter.isActive %} (filtré{{ total > 1 ? 's' }}){% endif %}</span>
+        {% if is_granted('encaissement.export') %}
+            <span>
+                <a class="ghost" href="{{ path('app_encaissements_export_xlsx', filter.toQuery) }}">⭳ Export Excel</a>
+                <a class="ghost" href="{{ path('app_encaissements_export_pdf', filter.toQuery) }}">⭳ Export PDF</a>
+            </span>
+        {% endif %}
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('date', 'Date', filter) }}
+                    {{ _self.sort('client', 'Client', filter) }}
+                    {{ _self.sort('nature', 'Nature', filter) }}
+                    {{ _self.sort('ttc', 'TTC', filter, 'num') }}
+                    {{ _self.sort('ht', 'HT', filter, 'num') }}
+                    {{ _self.sort('tva_source', 'TVA prélevée à la source', filter, 'num') }}
+                    {{ _self.sort('tva_reverser', 'TVA à reverser', filter, 'num') }}
+                    {{ _self.sort('aib', 'AIB prélevé', filter, 'num') }}
+                    {{ _self.sort('net', 'Net reçu', filter, 'num') }}
+                    {{ _self.sort('especes', 'Espèces / MoMo', filter, 'num') }}
+                    {{ _self.sort('cheque', 'Chèque / virement', filter, 'num') }}
+                    {{ _self.sort('observation', 'Observation', filter) }}
+                    {{ _self.sort('coherence', 'Cohérence', filter) }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for e in rows %}
+                <tr>
+                    <td class="nowrap">{{ e.dateEncaissement|date('d/m/Y') }}</td>
+                    <td><strong>{{ e.client.name }}</strong>{% if not e.client.hasIfu %}<small class="block muted">sans IFU</small>{% endif %}</td>
+                    <td>{% if e.nature == 'facture' %}<span class="muted">{{ e.natureLabel }}</span>{% else %}<span class="chip chip-nature">{{ e.natureLabel }}</span>{% endif %}</td>
+                    <td class="num">{{ e.montantTtc|fcfa_number }}</td>
+                    <td class="num">{{ e.montantHt|fcfa_number }}</td>
+                    <td class="num">{{ e.tvaPreleveeSource|fcfa_number }}</td>
+                    <td class="num">{{ e.tvaAReverser|fcfa_number }}</td>
+                    <td class="num">{{ e.aibPreleveSource|fcfa_number }}</td>
+                    <td class="num"><strong>{{ e.montantNetRecu|fcfa_number }}</strong></td>
+                    <td class="num">{{ e.montantEspecesMomo|fcfa_number }}</td>
+                    <td class="num">{{ e.montantChequeVirement|fcfa_number }}</td>
+                    <td class="obs">{{ e.observation }}</td>
+                    <td>{{ _self.coherence(e.ecart) }}</td>
+                    <td class="right">
+                        <div class="row-actions">
+                            {% if is_granted('encaissement.edit') %}<a class="ghost" href="{{ path('app_encaissement_edit', {id: e.id}) }}">Modifier</a>{% endif %}
+                            {% if is_granted('encaissement.delete') %}
+                                <form method="post" action="{{ path('app_encaissement_delete', {id: e.id}) }}"
+                                      onsubmit="return confirm('Supprimer l\'encaissement de {{ e.client.name|e('js') }} du {{ e.dateEncaissement|date('d/m/Y') }} ?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('encaissement_' ~ e.id) }}">
+                                    <button class="ghost danger" type="submit">Supprimer</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="14" class="muted">Aucun encaissement{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if totals.n > 0 %}
+                {% set ecart = totals.net - totals.especes - totals.cheque %}
+                <tfoot>
+                    <tr>
+                        <td colspan="3">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }}</td>
+                        <td class="num">{{ totals.ttc|fcfa_number }}</td>
+                        <td class="num">{{ totals.ht|fcfa_number }}</td>
+                        <td class="num">{{ totals.tvaSource|fcfa_number }}</td>
+                        <td class="num">{{ totals.tvaReverser|fcfa_number }}</td>
+                        <td class="num">{{ totals.aib|fcfa_number }}</td>
+                        <td class="num">{{ totals.net|fcfa_number }}</td>
+                        <td class="num">{{ totals.especes|fcfa_number }}</td>
+                        <td class="num">{{ totals.cheque|fcfa_number }}</td>
+                        <td></td>
+                        <td>{{ _self.coherence(ecart) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    <p class="muted small">Montants en FCFA. Les totaux couvrent toutes les lignes correspondant aux filtres, pas seulement la page affichée.</p>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_encaissements', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_encaissements', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

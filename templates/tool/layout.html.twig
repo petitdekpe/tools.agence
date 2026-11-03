@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{# Mise en page des outils Personnel et Matériel : titre, actions, onglets entre les deux outils, messages. #}
+
+{% block title %}{% block page_title %}{% endblock %} · {{ site_settings().headerTitle }}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
+
+{% block body %}
+    {% set route = app.request.attributes.get('_route') %}
+    <div class="enc-head">
+        <div>
+            <a class="back" href="{{ path('app_home') }}">← Tous les outils</a>
+            <h1>{% block tool_icon %}{% endblock %} {{ block('page_title') }}</h1>
+        </div>
+        <div class="enc-actions">{% block tool_actions %}{% endblock %}</div>
+    </div>
+
+    <nav class="enc-tabs">
+        {% if is_granted('personnel.view') %}<a href="{{ path('app_personnel') }}" class="{{ route starts with 'app_personnel' ? 'active' }}">👥 Personnel</a>{% endif %}
+        {% if is_granted('materiel.view') %}<a href="{{ path('app_materiel') }}" class="{{ route starts with 'app_materiel' ? 'active' }}">💻 Matériel</a>{% endif %}
+    </nav>
+
+    {% for type in ['success', 'error'] %}
+        {% for message in app.flashes(type) %}<div class="alert {{ type }}">{{ message }}</div>{% endfor %}
+    {% endfor %}
+
+    {% block content %}{% endblock %}
+{% endblock %}

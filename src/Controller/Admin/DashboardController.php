@@ -3,24 +3,27 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Correction;
+use App\Entity\Role;
 use App\Entity\User;
+use App\Repository\RoleRepository;
+use App\Security\Permission;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class DashboardController extends AbstractController
 {
+    #[IsGranted(Permission::ADMIN_ACCESS)]
     #[Route('/admin', name: 'app_admin')]
-    public function index(EntityManagerInterface $em): Response
+    public function index(EntityManagerInterface $em, RoleRepository $roles): Response
     {
         $users = $em->getRepository(User::class);
         $corrections = $em->getRepository(Correction::class);
 
-        $byRole = array_fill_keys(array_keys(User::ROLE_LABELS), 0);
-        foreach ($em->createQuery('SELECT u.role AS role, COUNT(u.id) AS n FROM '.User::class.' u GROUP BY u.role')->getArrayResult() as $row) {
-            $byRole[$row['role']] = (int) $row['n'];
-        }
+        $counts = $roles->userCounts();
+        $byRole = array_map(static fn (Role $role): array => ['id' => $role->getId(), 'code' => $role->getCode(), 'label' => $role->getLabel(), 'n' => $counts[$role->getId()] ?? 0], $roles->findAllOrdered());
 
         $recentLogins = $em->createQuery('SELECT u FROM '.User::class.' u WHERE u.lastLoginAt IS NOT NULL ORDER BY u.lastLoginAt DESC')
             ->setMaxResults(5)->getResult();
@@ -33,7 +36,6 @@ class DashboardController extends AbstractController
             'totalUsers' => $users->count([]),
             'activeUsers' => $users->count(['active' => true]),
             'byRole' => $byRole,
-            'roleLabels' => User::ROLE_LABELS,
             'totalCorrections' => $corrections->count([]),
             'weekCorrections' => (int) $em->createQuery('SELECT COUNT(c.id) FROM '.Correction::class.' c WHERE c.createdAt >= :d')
                 ->setParameter('d', new \DateTimeImmutable('-7 days'))->getSingleScalarResult(),

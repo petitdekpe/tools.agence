@@ -1,0 +1,15 @@
+{% extends 'encaissement/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouveau client' : 'Modifier ' ~ client.name }}{% endblock %}
+{% block enc_actions %}<a class="ghost" href="{{ path('app_clients') }}">← Retour aux clients</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.name) }}
+            {{ form_row(form.ifu) }}
+            <button class="btn" type="submit">{{ isNew ? 'Créer le client' : 'Enregistrer' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

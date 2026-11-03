@@ -1,0 +1,56 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Rôles{% endblock %}
+
+{% block page_actions %}<a class="btn" href="{{ path('app_admin_role_new') }}">+ Nouveau rôle</a>{% endblock %}
+
+{% block content %}
+    <p class="muted">Un rôle regroupe des permissions : ce que ses utilisateurs voient et peuvent faire dans chaque outil. Créez un rôle par métier, puis attribuez-le depuis la page Utilisateurs. L'administrateur a toujours tous les droits.</p>
+
+    <div class="table-card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Rôle</th>
+                    <th>Type</th>
+                    <th class="num">Utilisateurs</th>
+                    <th>Permissions</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in roles %}
+                {% set n = counts[r.id] ?? 0 %}
+                <tr>
+                    <td>
+                        <strong>{{ r.label }}</strong>
+                        {% if r.description %}<small class="block muted">{{ r.description }}</small>{% endif %}
+                    </td>
+                    <td>{% if r.system %}<span class="chip chip-muted">Système</span>{% else %}<span class="chip chip-info">Créé</span>{% endif %}</td>
+                    <td class="num">
+                        {% if n > 0 %}<a href="{{ path('app_admin_users', {role: r.id}) }}">{{ n }}</a>{% else %}<span class="muted">0</span>{% endif %}
+                    </td>
+                    <td>
+                        {% set count = granted[r.id]|length %}
+                        {% if r.admin %}<span class="chip chip-ok">Toutes ({{ total }})</span>
+                        {% else %}<span class="pill">{{ count }} sur {{ total }}</span>{% endif %}
+                    </td>
+                    <td class="right">
+                        <div class="row-actions">
+                            <a class="ghost" href="{{ path('app_admin_role_edit', {id: r.id}) }}">{{ r.admin ? 'Voir' : 'Modifier' }}</a>
+                            {% if not r.admin %}<a class="ghost" href="{{ path('app_admin_role_new', {copier: r.id}) }}">Dupliquer</a>{% endif %}
+                            {% if not r.system %}
+                                <form method="post" action="{{ path('app_admin_role_delete', {id: r.id}) }}"
+                                      onsubmit="return confirm('Supprimer le rôle {{ r.label|e('js') }} ?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('role_' ~ r.id) }}">
+                                    <button class="ghost danger" type="submit">Supprimer</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

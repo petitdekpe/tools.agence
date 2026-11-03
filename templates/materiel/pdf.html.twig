@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventaire du matériel</title>
+    <style>
+        @page { margin: 28px 24px; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 8.5px; color: #111827; }
+        h1 { font-size: 15px; margin: 0 0 4px; }
+        .meta { color: #6b7280; margin-bottom: 12px; font-size: 8.5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f766e; color: #fff; text-align: left; padding: 5px 4px; font-size: 8px; }
+        td { padding: 4px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        .num { text-align: right; white-space: nowrap; }
+        tfoot td { background: #e6f4f2; font-weight: bold; border-top: 2px solid #0f766e; }
+        .bad { color: #b91c1c; }
+        tr { page-break-inside: avoid; }
+    </style>
+</head>
+<body>
+    <h1>Inventaire du matériel</h1>
+    <div class="meta">
+        {{ filterSummary ? 'Filtres : ' ~ filterSummary : 'Aucun filtre' }} · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }} · Édité le {{ generatedAt|date('d/m/Y à H:i') }} · Valeurs en FCFA
+    </div>
+    <table>
+        <thead>
+            <tr><th>Désignation</th><th>Catégorie</th><th>Référence</th><th>État</th><th>Détenteur</th><th>Depuis le</th><th>Achat</th><th class="num">Valeur</th></tr>
+        </thead>
+        <tbody>
+        {% for m in rows %}
+            {% set open = m.currentAffectation %}
+            <tr>
+                <td>{{ m.designation }}</td>
+                <td>{{ m.categoryLabel }}</td>
+                <td>{{ m.reference }}</td>
+                <td>{{ m.etatLabel }}</td>
+                <td>{% if open %}{{ open.personnel.fullName }}{% if not open.personnel.active %} <span class="bad">(parti)</span>{% endif %}{% else %}{{ m.reformed ? '' : 'Disponible' }}{% endif %}</td>
+                <td>{{ open ? open.assignedAt|date('d/m/Y') }}</td>
+                <td>{{ m.purchasedAt ? m.purchasedAt|date('d/m/Y') }}</td>
+                <td class="num">{{ m.purchaseValue is not null ? m.purchaseValue|fcfa_number }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4">Total · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
+                <td colspan="3">{{ totals.assigned }} affecté{{ totals.assigned > 1 ? 's' }}</td>
+                <td class="num">{{ totals.value|fcfa_number }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

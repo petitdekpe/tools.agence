@@ -4,6 +4,8 @@ namespace App\Controller\Admin;
 
 use App\Entity\User;
 use App\Form\UserType;
+use App\Repository\RoleRepository;
+use App\Security\Permission;
 use App\Service\ActivityLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,19 +15,28 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-/** Admin et direction consultent la liste ; seul l'admin crée, modifie et supprime. */
+/** Les rôles autorisés (permission « users.view ») consultent la liste ; seul l'admin crée, modifie et supprime. */
 #[Route('/admin/users')]
 class UserController extends AbstractController
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly UserPasswordHasherInterface $hasher, private readonly ActivityLogger $activity)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly UserPasswordHasherInterface $hasher,
+        private readonly ActivityLogger $activity,
+        private readonly RoleRepository $roles,
+    ) {
     }
 
+    #[IsGranted(Permission::USERS_VIEW)]
     #[Route('', name: 'app_admin_users', methods: 'GET')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $role = ($roleId = $request->query->getInt('role')) ? $this->roles->find($roleId) : null;
+
         return $this->render('admin/users/index.html.twig', [
-            'users' => $this->em->getRepository(User::class)->findBy([], ['fullName' => 'ASC']),
+            'users' => $this->em->getRepository(User::class)->findBy($role ? ['role' => $role] : [], ['fullName' => 'ASC']),
+            'roles' => $this->roles->findAllOrdered(),
+            'role' => $role,
         ]);
     }
 
@@ -33,7 +44,7 @@ class UserController extends AbstractController
     #[Route('/new', name: 'app_admin_user_new', methods: ['GET', 'POST'])]
     public function new(Request $request): Response
     {
-        $user = new User();
+        $user = (new User())->setRole($this->roles->findOneByCode(User::ROLE_AGENT));
         $form = $this->createForm(UserType::class, $user, ['is_new' => true]);
         $form->handleRequest($request);
 
@@ -133,7 +144,7 @@ class UserController extends AbstractController
 
     private function otherActiveAdmins(User $except): int
     {
-        return (int) $this->em->createQuery('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.role = :r AND u.active = true AND u.id != :id')
+        return (int) $this->em->createQuery('SELECT COUNT(u.id) FROM '.User::class.' u JOIN u.role r WHERE r.code = :r AND u.active = true AND u.id != :id')
             ->setParameters(['r' => User::ROLE_ADMIN, 'id' => $except->getId()])
             ->getSingleScalarResult();
     }

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Correction;
+use App\Security\Permission;
 use App\Service\ActivityLogger;
 use App\Service\MediaCorrector;
 use Doctrine\ORM\EntityManagerInterface;
@@ -11,8 +12,10 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/correcteur-media')]
+#[IsGranted(Permission::CORRECTEUR_USE)]
 class CorrecteurController extends AbstractController
 {
     private const MAX_LENGTH = 20000;

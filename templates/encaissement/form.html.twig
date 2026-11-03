@@ -1,0 +1,58 @@
+{% extends 'encaissement/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouvel encaissement' : 'Modifier l\'encaissement' }}{% endblock %}
+{% block enc_actions %}<a class="ghost" href="{{ path('app_encaissements') }}">← Retour à la liste</a>{% endblock %}
+
+{% block content %}
+    {{ form_start(form, {attr: {
+        class: 'form enc-form',
+        'data-controller': 'encaissement-form',
+        'data-encaissement-form-tva-value': rates.tva,
+        'data-encaissement-form-aib-avec-ifu-value': rates.aibAvecIfu,
+        'data-encaissement-form-aib-sans-ifu-value': rates.aibSansIfu,
+        'data-encaissement-form-frozen-tva-value': frozen ? frozen.tva : '',
+        'data-encaissement-form-frozen-aib-value': frozen ? frozen.aib : '',
+        'data-encaissement-form-frozen-client-value': frozen ? frozen.client : '',
+        novalidate: 'novalidate',
+    }}) }}
+        {{ form_errors(form) }}
+        <div class="enc-grid">
+            <section class="panel">
+                <h2>Saisie</h2>
+                {{ form_row(form.dateEncaissement) }}
+                <div>
+                    {{ form_row(form.client) }}
+                    <small>Client absent de la liste ? <a href="{{ path('app_client_new') }}">Créer le client</a> (vous reviendrez ensuite ici).</small>
+                </div>
+                {{ form_row(form.nature) }}
+                {{ form_row(form.montantTtc) }}
+                {{ form_row(form.retenueTvaSource) }}
+                {{ form_row(form.observation) }}
+            </section>
+
+            <section class="panel">
+                <h2>Calcul automatique</h2>
+                <p class="muted small" data-encaissement-form-target="rates"></p>
+                <dl class="calc">
+                    <div><dt>Montant HT</dt><dd data-encaissement-form-target="ht">{{ encaissement.montantHt|fcfa }}</dd></div>
+                    <div><dt>TVA facturée</dt><dd data-encaissement-form-target="tvaFacturee">{{ encaissement.tvaFacturee|fcfa }}</dd></div>
+                    <div><dt>TVA prélevée à la source</dt><dd data-encaissement-form-target="tvaSource">{{ encaissement.tvaPreleveeSource|fcfa }}</dd></div>
+                    <div><dt>TVA à reverser</dt><dd data-encaissement-form-target="tvaReverser">{{ encaissement.tvaAReverser|fcfa }}</dd></div>
+                    <div><dt>AIB prélevé à la source</dt><dd data-encaissement-form-target="aib">{{ encaissement.aibPreleveSource|fcfa }}</dd></div>
+                    <div class="total"><dt>Net reçu</dt><dd data-encaissement-form-target="net">{{ encaissement.montantNetRecu|fcfa }}</dd></div>
+                </dl>
+                <p class="muted small">Aperçu en direct. Les montants sont recalculés par le serveur à l'enregistrement.</p>
+
+                <h2>Répartition du net reçu</h2>
+                <div class="enc-quick">
+                    <button type="button" class="ghost" data-action="encaissement-form#allCash">Tout en espèces / MoMo</button>
+                    <button type="button" class="ghost" data-action="encaissement-form#allTransfer">Tout en virement</button>
+                </div>
+                {{ form_row(form.montantEspecesMomo) }}
+                {{ form_row(form.montantChequeVirement) }}
+                <div class="repartition" data-encaissement-form-target="warning" hidden></div>
+            </section>
+        </div>
+        <button class="btn" type="submit">{{ isNew ? 'Enregistrer l\'encaissement' : 'Enregistrer les modifications' }}</button>
+    {{ form_end(form) }}
+{% endblock %}

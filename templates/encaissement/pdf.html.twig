@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Suivi des encaissements</title>
+    <style>
+        @page { margin: 28px 24px; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #111827; }
+        h1 { font-size: 15px; margin: 0 0 4px; }
+        .meta { color: #6b7280; margin-bottom: 12px; font-size: 8.5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f766e; color: #fff; text-align: left; padding: 5px 4px; font-size: 7.5px; }
+        td { padding: 4px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        .num { text-align: right; white-space: nowrap; }
+        tfoot td { background: #e6f4f2; font-weight: bold; border-top: 2px solid #0f766e; }
+        .warn { color: #b45309; }
+        .bad { color: #b91c1c; }
+        .ok { color: #047857; }
+        tr { page-break-inside: avoid; }
+    </style>
+</head>
+<body>
+    <h1>Suivi des encaissements</h1>
+    <div class="meta">
+        {{ filterSummary ? 'Filtres : ' ~ filterSummary : 'Aucun filtre' }} · {{ totals.n }} encaissement{{ totals.n > 1 ? 's' }} · Édité le {{ generatedAt|date('d/m/Y à H:i') }} · Montants en FCFA
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th><th>Client</th><th>Nature</th><th class="num">TTC</th><th class="num">HT</th><th class="num">TVA prélevée à la source</th><th class="num">TVA à reverser</th>
+                <th class="num">AIB prélevé</th><th class="num">Net reçu</th><th class="num">Espèces / MoMo</th><th class="num">Chèque / virement</th><th>Observation</th><th>Cohérence</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for e in rows %}
+            {% set ecart = e.ecart %}
+            <tr>
+                <td>{{ e.dateEncaissement|date('d/m/Y') }}</td>
+                <td>{{ e.client.name }}</td>
+                <td>{{ e.natureLabel }}</td>
+                <td class="num">{{ e.montantTtc|fcfa_number }}</td>
+                <td class="num">{{ e.montantHt|fcfa_number }}</td>
+                <td class="num">{{ e.tvaPreleveeSource|fcfa_number }}</td>
+                <td class="num">{{ e.tvaAReverser|fcfa_number }}</td>
+                <td class="num">{{ e.aibPreleveSource|fcfa_number }}</td>
+                <td class="num">{{ e.montantNetRecu|fcfa_number }}</td>
+                <td class="num">{{ e.montantEspecesMomo|fcfa_number }}</td>
+                <td class="num">{{ e.montantChequeVirement|fcfa_number }}</td>
+                <td>{{ e.observation }}</td>
+                <td class="{{ ecart == 0 ? 'ok' : (ecart > 0 ? 'warn' : 'bad') }}">
+                    {{ ecart == 0 ? 'OK' : (ecart > 0 ? 'Écart de ' ~ ecart|fcfa : 'Dépassement de ' ~ (-ecart)|fcfa) }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            {% set ecart = totals.net - totals.especes - totals.cheque %}
+            <tr>
+                <td colspan="3">Total</td>
+                <td class="num">{{ totals.ttc|fcfa_number }}</td>
+                <td class="num">{{ totals.ht|fcfa_number }}</td>
+                <td class="num">{{ totals.tvaSource|fcfa_number }}</td>
+                <td class="num">{{ totals.tvaReverser|fcfa_number }}</td>
+                <td class="num">{{ totals.aib|fcfa_number }}</td>
+                <td class="num">{{ totals.net|fcfa_number }}</td>
+                <td class="num">{{ totals.especes|fcfa_number }}</td>
+                <td class="num">{{ totals.cheque|fcfa_number }}</td>
+                <td></td>
+                <td>{{ ecart == 0 ? 'OK' : 'Écart de ' ~ ecart|fcfa }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

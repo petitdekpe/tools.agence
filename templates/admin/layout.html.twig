@@ -19,10 +19,12 @@
 
             <nav class="adm-nav">
                 <a href="{{ path('app_admin') }}" class="{{ route == 'app_admin' ? 'active' }}"><i>▦</i> Tableau de bord</a>
-                <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}"><i>☺</i> Utilisateurs</a>
-                <a href="{{ path('app_admin_activity') }}" class="{{ route == 'app_admin_activity' ? 'active' }}"><i>☰</i> Journal d'activité</a>
+                {% if is_granted('users.view') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}"><i>☺</i> Utilisateurs</a>{% endif %}
+                {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_roles') }}" class="{{ route starts with 'app_admin_role' ? 'active' }}"><i>🔑</i> Rôles</a>{% endif %}
+                {% if is_granted('activity.view') %}<a href="{{ path('app_admin_activity') }}" class="{{ route == 'app_admin_activity' ? 'active' }}"><i>☰</i> Journal d'activité</a>{% endif %}
                 {% if is_granted('ROLE_ADMIN') %}
                     <a href="{{ path('app_admin_settings') }}" class="{{ route == 'app_admin_settings' ? 'active' }}"><i>⚙</i> Réglages du site</a>
+                    <a href="{{ path('app_admin_fiscal') }}" class="{{ route == 'app_admin_fiscal' ? 'active' }}"><i>%</i> Paramètres fiscaux</a>
                 {% endif %}
                 <span class="adm-nav-label">Outils</span>
                 <a href="{{ path('app_home') }}"><i>←</i> Retour au site</a>

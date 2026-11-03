@@ -2,11 +2,6 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
-    # Admin et direction peuvent aussi utiliser les outils des agents.
-    role_hierarchy:
-        ROLE_ADMIN: [ROLE_AGENT]
-        ROLE_DIRECTION: [ROLE_AGENT]
-
     providers:
         app_users:
             entity:
@@ -32,8 +27,9 @@ security:
 
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
-        - { path: ^/admin, roles: [ROLE_ADMIN, ROLE_DIRECTION] }
-        - { path: ^/, roles: ROLE_AGENT }
+        # Les droits fins sont des permissions de rôle (voir App\Security\Permission), vérifiées par chaque contrôleur.
+        - { path: ^/admin, allow_if: "is_granted('admin.access')" }
+        - { path: ^/, roles: ROLE_USER }
 
 when@test:
     security:

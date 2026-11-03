@@ -1,0 +1,125 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}Gestion du matériel{% endblock %}
+{% block tool_actions %}{% if is_granted('materiel.edit') %}<a class="btn" href="{{ path('app_materiel_new') }}">+ Nouveau matériel</a>{% endif %}{% endblock %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_materiel', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    {% if departedCount > 0 and filter.affectation != 'parti' %}
+        <div class="banner warn">
+            <span><strong>{{ departedCount }} matériel{{ departedCount > 1 ? 's' }}</strong> {{ departedCount > 1 ? 'sont détenus' : 'est détenu' }} par du personnel parti.</span>
+            <a href="{{ path('app_materiel', {affectation: 'parti'}) }}">Voir à récupérer →</a>
+        </div>
+    {% endif %}
+
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Rechercher (désignation, référence)…" aria-label="Rechercher" size="30">
+        <select name="categorie" aria-label="Catégorie">
+            <option value="">Toutes les catégories</option>
+            {% for key, label in categories %}<option value="{{ key }}" {{ filter.categorie == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="etat" aria-label="État">
+            <option value="">Tous les états</option>
+            {% for key, label in etats %}<option value="{{ key }}" {{ filter.etat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="affectation" aria-label="Affectation">
+            <option value="">Toutes les affectations</option>
+            {% for key, label in affectations %}<option value="{{ key }}" {{ filter.affectation == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="detenteur" aria-label="Détenteur">
+            <option value="">Tous les détenteurs</option>
+            {% for h in holders %}<option value="{{ h.id }}" {{ filter.detenteur == h.id ? 'selected' }}>{{ h.fullName }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_materiel') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} matériel{{ total > 1 ? 's' }}{% if filter.isActive %} (filtré{{ total > 1 ? 's' }}){% endif %}</span>
+        {% if is_granted('materiel.export') %}
+            <span>
+                <a class="ghost" href="{{ path('app_materiel_export_xlsx', filter.toQuery) }}">⭳ Export Excel</a>
+                <a class="ghost" href="{{ path('app_materiel_export_pdf', filter.toQuery) }}">⭳ Export PDF</a>
+            </span>
+        {% endif %}
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('designation', 'Désignation', filter) }}
+                    {{ _self.sort('categorie', 'Catégorie', filter) }}
+                    {{ _self.sort('reference', 'Référence', filter) }}
+                    {{ _self.sort('etat', 'État', filter) }}
+                    {{ _self.sort('detenteur', 'Détenteur', filter) }}
+                    {{ _self.sort('achat', 'Achat', filter) }}
+                    {{ _self.sort('valeur', 'Valeur', filter, 'num') }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for m in rows %}
+                {% set open = m.currentAffectation %}
+                <tr class="{{ m.reformed ? 'inactive' }}">
+                    <td><a href="{{ path('app_materiel_show', {id: m.id}) }}"><strong>{{ m.designation }}</strong></a></td>
+                    <td>{{ m.categoryLabel }}</td>
+                    <td>{{ m.reference ?: '—' }}</td>
+                    <td>
+                        {% if m.etat == 'panne' %}<span class="chip chip-bad">{{ m.etatLabel }}</span>
+                        {% elseif m.reformed %}<span class="chip chip-muted">{{ m.etatLabel }}</span>
+                        {% else %}{{ m.etatLabel }}{% endif %}
+                    </td>
+                    <td>
+                        {% if open %}
+                            <a href="{{ path('app_materiel', {detenteur: open.personnel.id}) }}">{{ open.personnel.fullName }}</a>
+                            <small class="block muted">depuis le {{ open.assignedAt|date('d/m/Y') }}</small>
+                            {% if not open.personnel.active %}<span class="chip chip-bad">Détenteur parti</span>{% endif %}
+                        {% elseif m.reformed %}<span class="muted">—</span>
+                        {% else %}<span class="chip chip-ok">Disponible</span>{% endif %}
+                    </td>
+                    <td class="nowrap">{{ m.purchasedAt ? m.purchasedAt|date('d/m/Y') : '—' }}</td>
+                    <td class="num">{{ m.purchaseValue is not null ? m.purchaseValue|fcfa_number : '—' }}</td>
+                    <td class="right">
+                        <div class="row-actions">
+                            <a class="ghost" href="{{ path('app_materiel_show', {id: m.id}) }}">Fiche</a>
+                            {% if is_granted('materiel.edit') %}<a class="ghost" href="{{ path('app_materiel_edit', {id: m.id}) }}">Modifier</a>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="muted">Aucun matériel{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if totals.n > 0 %}
+                <tfoot>
+                    <tr>
+                        <td colspan="4">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
+                        <td>{{ totals.assigned }} affecté{{ totals.assigned > 1 ? 's' }}</td>
+                        <td></td>
+                        <td class="num">{{ totals.value|fcfa_number }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    <p class="muted small">Valeurs d'achat en FCFA. Les totaux couvrent toutes les lignes correspondant aux filtres, pas seulement la page affichée.</p>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_materiel', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_materiel', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

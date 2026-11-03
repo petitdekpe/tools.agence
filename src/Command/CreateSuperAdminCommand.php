@@ -3,6 +3,7 @@
 namespace App\Command;
 
 use App\Entity\User;
+use App\Repository\RoleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -17,7 +18,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 #[AsCommand(name: 'app:create-superadmin', description: 'Crée (ou réinitialise) le compte administrateur principal')]
 class CreateSuperAdminCommand extends Command
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly UserPasswordHasherInterface $hasher)
+    public function __construct(private readonly EntityManagerInterface $em, private readonly UserPasswordHasherInterface $hasher, private readonly RoleRepository $roles)
     {
         parent::__construct();
     }
@@ -40,6 +41,13 @@ class CreateSuperAdminCommand extends Command
             $io->error('E-mail refusé : seuls @'.implode(', @', User::ALLOWED_DOMAINS).' sont acceptés.');
 
             return Command::INVALID;
+        }
+
+        $adminRole = $this->roles->findOneByCode(User::ROLE_ADMIN);
+        if (!$adminRole) {
+            $io->error('Le rôle admin est introuvable : exécutez d\'abord les migrations (doctrine:migrations:migrate).');
+
+            return Command::FAILURE;
         }
 
         $user = $this->em->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -70,7 +78,7 @@ class CreateSuperAdminCommand extends Command
         }
 
         $user->setFullName($name)
-            ->setRole(User::ROLE_ADMIN)
+            ->setRole($adminRole)
             ->setActive(true)
             ->setTotpSecret(null)
             ->setPassword($this->hasher->hashPassword($user, $password));

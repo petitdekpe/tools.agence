@@ -18,15 +18,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
     /** Seuls les e-mails de ces domaines peuvent avoir un compte. */
     public const ALLOWED_DOMAINS = ['agenceprocom.pro', 'beninbouge.com', 'beninbouge.bj', 'procom.pro'];
 
+    /** Codes des rôles système ; les autres rôles sont créés depuis l'administration (voir Role). */
     public const ROLE_AGENT = 'ROLE_AGENT';
     public const ROLE_ADMIN = 'ROLE_ADMIN';
     public const ROLE_DIRECTION = 'ROLE_DIRECTION';
 
-    public const ROLE_LABELS = [
-        self::ROLE_AGENT => 'Agent',
-        self::ROLE_ADMIN => 'Admin',
-        self::ROLE_DIRECTION => 'Direction',
-    ];
+    /** Rôle de base de tout compte connecté, quel que soit son rôle métier. */
+    public const ROLE_USER = 'ROLE_USER';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -43,9 +41,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
     #[Assert\Length(max: 120)]
     private string $fullName = '';
 
-    #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: [self::ROLE_AGENT, self::ROLE_ADMIN, self::ROLE_DIRECTION])]
-    private string $role = self::ROLE_AGENT;
+    /** Chargé immédiatement : le compte est mis en session et ne doit pas y emporter un proxy. */
+    #[ORM\ManyToOne(fetch: 'EAGER')]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
+    #[Assert\NotNull(message: 'Choisissez un rôle.')]
+    private ?Role $role = null;
 
     #[ORM\Column]
     private string $password = '';
@@ -104,12 +104,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
         return $this;
     }
 
-    public function getRole(): string
+    public function getRole(): ?Role
     {
         return $this->role;
     }
 
-    public function setRole(string $role): static
+    public function setRole(?Role $role): static
     {
         $this->role = $role;
 
@@ -118,12 +118,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
 
     public function getRoleLabel(): string
     {
-        return self::ROLE_LABELS[$this->role] ?? $this->role;
+        return $this->role?->getLabel() ?? '';
     }
 
     public function isAdmin(): bool
     {
-        return self::ROLE_ADMIN === $this->role;
+        return $this->role?->isAdmin() ?? false;
     }
 
     public function isActive(): bool
@@ -214,7 +214,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
         return $user instanceof self
             && $user->isActive()
             && $user->getId() === $this->id
-            && $user->getRole() === $this->role
+            && $user->getRole()?->getId() === $this->role?->getId()
             && $user->getPassword() === $this->password;
     }
 
@@ -223,9 +223,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
         return $this->email;
     }
 
+    /** Le code du rôle (pour ROLE_ADMIN) et ROLE_USER ; les droits fins passent par les permissions, voir PermissionVoter. */
     public function getRoles(): array
     {
-        return [$this->role];
+        return array_values(array_unique(array_filter([$this->role?->getCode(), self::ROLE_USER])));
     }
 
     public function getPassword(): string

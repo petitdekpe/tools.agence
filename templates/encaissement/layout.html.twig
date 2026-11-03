@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% block page_title %}Suivi des encaissements{% endblock %} · {{ site_settings().headerTitle }}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
+
+{% block body %}
+    {% set route = app.request.attributes.get('_route') %}
+    <div class="enc-head">
+        <div>
+            <a class="back" href="{{ path('app_home') }}">← Tous les outils</a>
+            <h1>💰 {{ block('page_title') }}</h1>
+        </div>
+        <div class="enc-actions">{% block enc_actions %}{% if is_granted('encaissement.edit') %}<a class="btn" href="{{ path('app_encaissement_new') }}">+ Nouvel encaissement</a>{% endif %}{% endblock %}</div>
+    </div>
+
+    <nav class="enc-tabs">
+        <a href="{{ path('app_encaissements') }}" class="{{ route in ['app_encaissements', 'app_encaissement_new', 'app_encaissement_edit'] ? 'active' }}">Encaissements</a>
+        <a href="{{ path('app_encaissements_summary') }}" class="{{ route == 'app_encaissements_summary' ? 'active' }}">Synthèse</a>
+        <a href="{{ path('app_clients') }}" class="{{ route starts with 'app_client' ? 'active' }}">Clients</a>
+        {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_fiscal') }}">Paramètres fiscaux</a>{% endif %}
+    </nav>
+
+    {% for type in ['success', 'error'] %}
+        {% for message in app.flashes(type) %}<div class="alert {{ type }}">{{ message }}</div>{% endfor %}
+    {% endfor %}
+
+    {% block content %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}Gestion du personnel{% endblock %}
+{% block tool_actions %}{% if is_granted('personnel.edit') %}<a class="btn" href="{{ path('app_personnel_new') }}">+ Nouvelle fiche</a>{% endif %}{% endblock %}
+
+{% macro sort(key, label, filter) %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ filter.sort == key ? 'sorted' }}">
+        <a href="{{ path('app_personnel', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Rechercher (nom, poste, service, e-mail)…" aria-label="Rechercher" size="34">
+        <select name="statut" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            {% for key, label in statuses %}<option value="{{ key }}" {{ filter.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="service" aria-label="Service">
+            <option value="">Tous les services</option>
+            {% for d in departments %}<option value="{{ d }}" {{ filter.service == d ? 'selected' }}>{{ d }}</option>{% endfor %}
+        </select>
+        <select name="contrat" aria-label="Contrat">
+            <option value="">Tous les contrats</option>
+            {% for key, label in contracts %}<option value="{{ key }}" {{ filter.contrat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_personnel') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar"><span class="muted">{{ total }} fiche{{ total > 1 ? 's' }}{% if filter.isActive %} (filtrée{{ total > 1 ? 's' }}){% endif %}</span></div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('nom', 'Nom', filter) }}
+                    {{ _self.sort('poste', 'Poste', filter) }}
+                    {{ _self.sort('service', 'Service', filter) }}
+                    {{ _self.sort('contrat', 'Contrat', filter) }}
+                    {{ _self.sort('entree', 'Entrée', filter) }}
+                    {{ _self.sort('statut', 'Statut', filter) }}
+                    {% if held is not null %}<th>Matériel</th>{% endif %}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in rows %}
+                {% set n = held[p.id]|default(0) %}
+                <tr class="{{ p.active ? '' : 'inactive' }}">
+                    <td><a href="{{ path('app_personnel_show', {id: p.id}) }}"><strong>{{ p.fullName }}</strong></a>{% if p.email %}<small class="block muted">{{ p.email }}</small>{% endif %}</td>
+                    <td>{{ p.jobTitle ?: '—' }}</td>
+                    <td>{{ p.department ?: '—' }}</td>
+                    <td>
+                        {{ p.contractLabel }}
+                        {% if p.contractEnd %}<small class="block muted">jusqu'au {{ p.contractEnd|date('d/m/Y') }}</small>{% endif %}
+                        {% if p.contractEndingSoon %}
+                            {% set days = p.contractDaysLeft %}
+                            <span class="chip chip-warn">{{ days < 0 ? 'Contrat échu' : 'Fin dans ' ~ days ~ ' j' }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="nowrap">{{ p.hiredAt|date('d/m/Y') }}</td>
+                    <td>
+                        {% if p.active %}
+                            <span class="status-dot on">En poste</span>
+                            {% if p.leftAt %}<small class="block muted">départ le {{ p.leftAt|date('d/m/Y') }}</small>{% endif %}
+                        {% else %}
+                            <span class="status-dot off">Parti le {{ p.leftAt|date('d/m/Y') }}</span>
+                        {% endif %}
+                    </td>
+                    {% if held is not null %}
+                        <td>
+                            {% if n > 0 and not p.active %}<span class="chip chip-bad">{{ n }} non rendu{{ n > 1 ? 's' }}</span>
+                            {% elseif n > 0 %}<span class="chip chip-muted">{{ n }} en sa possession</span>
+                            {% else %}<span class="muted">—</span>{% endif %}
+                        </td>
+                    {% endif %}
+                    <td class="right">
+                        <div class="row-actions">
+                            <a class="ghost" href="{{ path('app_personnel_show', {id: p.id}) }}">Fiche</a>
+                            {% if is_granted('personnel.edit') %}<a class="ghost" href="{{ path('app_personnel_edit', {id: p.id}) }}">Modifier</a>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="muted">Aucune fiche{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_personnel', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_personnel', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

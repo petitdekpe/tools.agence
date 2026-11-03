@@ -1,0 +1,98 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}{{ person.fullName }}{% endblock %}
+{% block tool_actions %}
+    <a class="ghost" href="{{ path('app_personnel') }}">← Retour à la liste</a>
+    {% if is_granted('personnel.edit') %}<a class="btn" href="{{ path('app_personnel_edit', {id: person.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if not person.active and held|length > 0 %}
+        <div class="banner bad">
+            <span><strong>{{ held|length }} matériel{{ held|length > 1 ? 's' }} non rendu{{ held|length > 1 ? 's' }}</strong> : {{ person.fullName }} est parti{{ person.leftAt ? ' le ' ~ person.leftAt|date('d/m/Y') }}.</span>
+        </div>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>Identité et poste</h2>
+            <dl class="facts">
+                <div><dt>Statut</dt><dd>{% if person.active %}<span class="status-dot on">En poste</span>{% else %}<span class="status-dot off">Parti le {{ person.leftAt|date('d/m/Y') }}</span>{% endif %}</dd></div>
+                <div><dt>Poste</dt><dd>{{ person.jobTitle ?: '—' }}</dd></div>
+                <div><dt>Service</dt><dd>{{ person.department ?: '—' }}</dd></div>
+                <div><dt>E-mail</dt><dd>{{ person.email ?: '—' }}</dd></div>
+                <div><dt>Téléphone</dt><dd>{{ person.phone ?: '—' }}</dd></div>
+                <div><dt>Compte PROCOM Tools</dt><dd>{{ person.user ? person.user.fullName ~ ' (' ~ person.user.roleLabel ~ ')' : '—' }}</dd></div>
+            </dl>
+        </section>
+        <section class="panel">
+            <h2>Contrat</h2>
+            <dl class="facts">
+                <div><dt>Type</dt><dd>{{ person.contractLabel }}</dd></div>
+                <div><dt>Entrée</dt><dd>{{ person.hiredAt|date('d/m/Y') }}</dd></div>
+                <div><dt>Début du contrat</dt><dd>{{ person.contractStart ? person.contractStart|date('d/m/Y') : '—' }}</dd></div>
+                <div><dt>Fin du contrat</dt><dd>
+                    {{ person.contractEnd ? person.contractEnd|date('d/m/Y') : '—' }}
+                    {% if person.contractEndingSoon %}{% set days = person.contractDaysLeft %} <span class="chip chip-warn">{{ days < 0 ? 'Échu' : 'Dans ' ~ days ~ ' j' }}</span>{% endif %}
+                </dd></div>
+                <div><dt>Départ</dt><dd>{{ person.leftAt ? person.leftAt|date('d/m/Y') : '—' }}</dd></div>
+            </dl>
+        </section>
+        {% if person.notes %}
+            <section class="panel">
+                <h2>Notes</h2>
+                <p class="kv-text">{{ person.notes }}</p>
+            </section>
+        {% endif %}
+    </div>
+
+    {% if canSeeMateriel %}
+        <h2>Matériel en sa possession</h2>
+        <div class="table-card">
+            <table class="table enc-table">
+                <thead><tr><th>Matériel</th><th>Catégorie</th><th>Référence</th><th>État</th><th>Depuis le</th></tr></thead>
+                <tbody>
+                {% for m in held %}
+                    <tr>
+                        <td><a href="{{ path('app_materiel_show', {id: m.id}) }}"><strong>{{ m.designation }}</strong></a></td>
+                        <td>{{ m.categoryLabel }}</td>
+                        <td>{{ m.reference ?: '—' }}</td>
+                        <td>{{ m.etatLabel }}</td>
+                        <td class="nowrap">{{ m.currentAffectation.assignedAt|date('d/m/Y') }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="muted">Aucun matériel confié.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if history|length > 0 %}
+            <h2>Historique des remises</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead><tr><th>Matériel</th><th>Remis le</th><th>Rendu le</th><th>État au retour</th><th>Observation</th></tr></thead>
+                    <tbody>
+                    {% for a in history %}
+                        <tr>
+                            <td><a href="{{ path('app_materiel_show', {id: a.materiel.id}) }}">{{ a.materiel.designation }}</a></td>
+                            <td class="nowrap">{{ a.assignedAt|date('d/m/Y') }}</td>
+                            <td class="nowrap">{{ a.returnedAt ? a.returnedAt|date('d/m/Y') : 'En cours' }}</td>
+                            <td>{{ a.returnEtatLabel ?: '—' }}</td>
+                            <td class="obs">{{ a.returnNote ?: a.note }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if is_granted('personnel.delete') %}
+        <form method="post" action="{{ path('app_personnel_delete', {id: person.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer la fiche de {{ person.fullName|e('js') }} ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('personnel_' ~ person.id) }}">
+            <button class="ghost danger" type="submit">Supprimer cette fiche</button>
+        </form>
+    {% endif %}
+{% endblock %}

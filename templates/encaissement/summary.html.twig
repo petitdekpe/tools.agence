@@ -1,0 +1,97 @@
+{% extends 'encaissement/layout.html.twig' %}
+
+{% block page_title %}Synthèse des encaissements{% endblock %}
+
+{% block content %}
+    {% set months_fr = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+
+    <form method="get" class="filters">
+        <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
+        <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.from or filter.to %}<a class="ghost" href="{{ path('app_encaissements_summary') }}">Toute la période</a>{% endif %}
+    </form>
+
+    {% if byNature|length > 1 or (byNature|length == 1 and byNature[0].nature != 'facture') %}
+        <section class="enc-natures">
+            <h2>Par nature de paiement</h2>
+            <div class="enc-kpis">
+                {% for n in byNature %}
+                    <div class="kpi"><span class="kpi-label">{{ natures[n.nature]|default(n.nature) }}</span><strong>{{ n.ttc|fcfa }}</strong><small>TTC · {{ n.n }} encaissement{{ n.n > 1 ? 's' }} · net {{ n.net|fcfa }}</small></div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <div class="enc-summary">
+        <section>
+            <h2>Par mois</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead>
+                        <tr><th>Mois</th><th class="num">TTC</th><th class="num">HT</th><th class="num">TVA à reverser</th><th class="num">AIB</th><th class="num">Net reçu</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for m in months %}
+                        {% set parts = m.month|split('-') %}
+                        <tr>
+                            <td class="nowrap"><strong>{{ months_fr[parts[1] + 0] }} {{ parts[0] }}</strong><small class="block muted">{{ m.n }} encaissement{{ m.n > 1 ? 's' }}</small></td>
+                            <td class="num">{{ m.ttc|fcfa_number }}</td>
+                            <td class="num">{{ m.ht|fcfa_number }}</td>
+                            <td class="num">{{ m.tvaReverser|fcfa_number }}</td>
+                            <td class="num">{{ m.aib|fcfa_number }}</td>
+                            <td class="num"><strong>{{ m.net|fcfa_number }}</strong></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="muted">Aucun encaissement sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                    {% if months %}
+                        <tfoot>
+                            <tr>
+                                <td>Total · {{ sums.months.n }}</td>
+                                <td class="num">{{ sums.months.ttc|fcfa_number }}</td>
+                                <td class="num">{{ sums.months.ht|fcfa_number }}</td>
+                                <td class="num">{{ sums.months.tvaReverser|fcfa_number }}</td>
+                                <td class="num">{{ sums.months.aib|fcfa_number }}</td>
+                                <td class="num">{{ sums.months.net|fcfa_number }}</td>
+                            </tr>
+                        </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2>Par client</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead>
+                        <tr><th>Client</th><th class="num">Total TTC</th><th class="num">Net reçu</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for c in byClient %}
+                        <tr>
+                            <td><a href="{{ path('app_encaissements', filter.toQuery(false)|merge({client: c.id})) }}"><strong>{{ c.name }}</strong></a><small class="block muted">{{ c.n }} encaissement{{ c.n > 1 ? 's' }}</small></td>
+                            <td class="num">{{ c.ttc|fcfa_number }}</td>
+                            <td class="num"><strong>{{ c.net|fcfa_number }}</strong></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="muted">Aucun encaissement sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                    {% if byClient %}
+                        <tfoot>
+                            <tr>
+                                <td>Total · {{ sums.clients.n }}</td>
+                                <td class="num">{{ sums.clients.ttc|fcfa_number }}</td>
+                                <td class="num">{{ sums.clients.net|fcfa_number }}</td>
+                            </tr>
+                        </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </section>
+    </div>
+    <p class="muted small">Montants en FCFA.</p>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Paramètres fiscaux{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        <p class="muted">Taux utilisés par le suivi des encaissements. Le taux appliqué est figé sur chaque encaissement : modifier ces valeurs n'affecte que les nouvelles saisies.</p>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.tauxTva) }}
+            {{ form_row(form.tauxAibAvecIfu) }}
+            {{ form_row(form.tauxAibSansIfu) }}
+            <button class="btn" type="submit">Enregistrer</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

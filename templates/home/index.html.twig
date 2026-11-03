@@ -1,9 +1,10 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+    {% for message in app.flashes('error') %}<div class="alert error">{{ message }}</div>{% endfor %}
     <section class="cards">
         {% for tool in tools %}
-            <a class="card" href="{{ path(tool.route) }}">
+            <a class="card" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
                 <div class="card-top">
                     <span class="card-icon tone-{{ tool.color }}">{{ tool.icon }}</span>
                     <span class="card-arrow" aria-hidden="true">↗</span>

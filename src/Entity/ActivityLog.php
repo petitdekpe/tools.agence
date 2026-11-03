@@ -29,6 +29,26 @@ class ActivityLog
         'user.toggle' => 'Utilisateur activé/désactivé',
         'user.delete' => 'Utilisateur supprimé',
         'settings.update' => 'Réglages du site modifiés',
+        'encaissement.create' => 'Encaissement créé',
+        'encaissement.update' => 'Encaissement modifié',
+        'encaissement.delete' => 'Encaissement supprimé',
+        'encaissement.export' => 'Encaissements exportés',
+        'client.create' => 'Client créé',
+        'client.update' => 'Client modifié',
+        'fiscal.update' => 'Paramètres fiscaux modifiés',
+        'personnel.create' => 'Fiche personnel créée',
+        'personnel.update' => 'Fiche personnel modifiée',
+        'personnel.delete' => 'Fiche personnel supprimée',
+        'materiel.create' => 'Matériel créé',
+        'materiel.update' => 'Matériel modifié',
+        'materiel.delete' => 'Matériel supprimé',
+        'materiel.assign' => 'Matériel remis',
+        'materiel.return' => 'Matériel restitué',
+        'materiel.export' => 'Inventaire exporté',
+        'permissions.update' => 'Permissions modifiées',
+        'role.create' => 'Rôle créé',
+        'role.update' => 'Rôle modifié',
+        'role.delete' => 'Rôle supprimé',
     ];
 
     public const CATEGORIES = [
@@ -37,6 +57,13 @@ class ActivityLog
         'correction' => 'Corrections',
         'user' => 'Gestion des utilisateurs',
         'settings' => 'Réglages',
+        'encaissement' => 'Encaissements',
+        'client' => 'Clients',
+        'fiscal' => 'Paramètres fiscaux',
+        'personnel' => 'Personnel',
+        'materiel' => 'Matériel',
+        'permissions' => 'Permissions',
+        'role' => 'Rôles',
     ];
 
     #[ORM\Id]

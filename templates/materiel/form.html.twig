@@ -1,0 +1,20 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouveau matériel' : 'Modifier ' ~ item.designation }}{% endblock %}
+{% block tool_actions %}<a class="ghost" href="{{ isNew ? path('app_materiel') : path('app_materiel_show', {id: item.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.designation) }}
+            {{ form_row(form.category) }}
+            {{ form_row(form.reference) }}
+            {{ form_row(form.etat) }}
+            {{ form_row(form.purchasedAt) }}
+            {{ form_row(form.purchaseValue) }}
+            {{ form_row(form.observation) }}
+            <button class="btn" type="submit">{{ isNew ? 'Ajouter à l\'inventaire' : 'Enregistrer' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

@@ -2,10 +2,12 @@
 
 namespace App\Form;
 
+use App\Entity\Role;
 use App\Entity\User;
+use App\Repository\RoleRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -23,10 +25,15 @@ class UserType extends AbstractType
         $builder
             ->add('fullName', TextType::class, ['label' => 'Nom complet'])
             ->add('email', EmailType::class, ['label' => 'E-mail'])
-            ->add('role', ChoiceType::class, [
+            ->add('role', EntityType::class, [
                 'label' => 'Rôle',
-                'choices' => array_flip(User::ROLE_LABELS),
-                'help' => 'Agent : utilise les outils. Admin : gère utilisateurs et réglages. Direction : consulte le tableau de bord et les utilisateurs.',
+                'class' => Role::class,
+                'query_builder' => static fn (RoleRepository $roles) => $roles->orderedQuery(),
+                'choice_label' => 'label',
+                'choice_attr' => static fn (Role $role): array => $role->getDescription() ? ['title' => $role->getDescription()] : [],
+                'placeholder' => 'Choisir un rôle',
+                'invalid_message' => 'Ce rôle n\'existe pas.',
+                'help' => 'Le rôle décide des outils accessibles. Les rôles se créent et se règlent dans Administration > Rôles.',
             ])
             ->add('plainPassword', PasswordType::class, [
                 'label' => $isNew ? 'Mot de passe initial' : 'Nouveau mot de passe',

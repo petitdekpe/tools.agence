@@ -24,12 +24,11 @@
     <section class="panels">
         <div class="panel">
             <h2>Répartition par rôle</h2>
-            {% for role, label in roleLabels %}
-                {% set n = byRole[role] %}
+            {% for r in byRole %}
                 <div class="bar-row">
-                    <span>{{ label }}</span>
-                    <div class="bar"><div class="bar-fill role-{{ role|lower|replace({'role_': ''}) }}" style="width: {{ totalUsers ? (n / totalUsers * 100)|round : 0 }}%"></div></div>
-                    <strong>{{ n }}</strong>
+                    <span>{{ r.label }}</span>
+                    <div class="bar"><div class="bar-fill role-{{ r.code|lower|replace({'role_': ''}) }}" style="width: {{ totalUsers ? (r.n / totalUsers * 100)|round : 0 }}%"></div></div>
+                    <strong>{{ r.n }}</strong>
                 </div>
             {% endfor %}
         </div>

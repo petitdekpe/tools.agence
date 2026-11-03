@@ -1,0 +1,32 @@
+{% extends 'tool/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouvelle fiche' : 'Modifier ' ~ person.fullName }}{% endblock %}
+{% block tool_actions %}<a class="ghost" href="{{ isNew ? path('app_personnel') : path('app_personnel_show', {id: person.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    {{ form_start(form, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
+        {{ form_errors(form) }}
+        <div class="enc-grid">
+            <section class="panel">
+                <h2>Identité et poste</h2>
+                {{ form_row(form.lastName) }}
+                {{ form_row(form.firstName) }}
+                {{ form_row(form.jobTitle) }}
+                {{ form_row(form.department) }}
+                {{ form_row(form.email) }}
+                {{ form_row(form.phone) }}
+                {{ form_row(form.user) }}
+            </section>
+            <section class="panel">
+                <h2>Contrat et présence</h2>
+                {{ form_row(form.hiredAt) }}
+                {{ form_row(form.leftAt) }}
+                {{ form_row(form.contractType) }}
+                {{ form_row(form.contractStart) }}
+                {{ form_row(form.contractEnd) }}
+                {{ form_row(form.notes) }}
+            </section>
+        </div>
+        <button class="btn" type="submit">{{ isNew ? 'Créer la fiche' : 'Enregistrer' }}</button>
+    {{ form_end(form) }}
+{% endblock %}
