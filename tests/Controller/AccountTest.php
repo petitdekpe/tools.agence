@@ -132,6 +132,28 @@ class AccountTest extends AppWebTestCase
         self::assertEmailCount(0);
     }
 
+    public function testBoutonTestEmailEnvoieUnMessageSansRienModifier(): void
+    {
+        $target = $this->user(User::ROLE_AGENT, 'cible@procom.pro');
+        $hashBefore = $target->getPassword();
+        $this->login($this->user(User::ROLE_ADMIN));
+
+        $crawler = $this->browser->request('GET', '/admin/users');
+        $this->browser->submit($crawler->filter('form[action$="/'.$target->getId().'/test-mail"]')->form());
+        self::assertResponseRedirects('/admin/users');
+
+        self::assertEmailCount(1);
+        $mail = self::getMailerMessage();
+        self::assertEmailAddressContains($mail, 'To', 'cible@procom.pro');
+        self::assertStringContainsString('e-mail de test', $mail->getTextBody());
+        $fresh = $this->fresh(User::class, $target->getId());
+        self::assertSame($hashBefore, $fresh->getPassword());
+        self::assertTrue($fresh->hasTwoFactor());
+
+        $this->browser->request('POST', '/admin/users/'.$target->getId().'/test-mail', ['_token' => 'x']);
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testReinitialisationAdminEnvoieUnNouveauMotDePasse(): void
     {
         $target = $this->user(User::ROLE_AGENT, 'perdu@procom.pro');

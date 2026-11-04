@@ -49,6 +49,10 @@
                             <div class="row-actions">
                                 <a class="ghost" href="{{ path('app_admin_user_edit', {id: u.id}) }}">Modifier</a>
                                 <a class="ghost" href="{{ path('app_admin_activity', {user: u.id}) }}">Activité</a>
+                                <form method="post" action="{{ path('app_admin_user_testmail', {id: u.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
+                                    <button class="ghost" type="submit">Test e-mail</button>
+                                </form>
                                 {% if u != app.user %}
                                     {% if u.hasTwoFactor %}
                                         <form method="post" action="{{ path('app_admin_user_reset2fa', {id: u.id}) }}"

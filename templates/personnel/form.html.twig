@@ -15,7 +15,11 @@
                 {{ form_row(form.department) }}
                 {{ form_row(form.email) }}
                 {{ form_row(form.phone) }}
-                {{ form_row(form.user) }}
+                {% if isNew %}
+                    {% if form.role is defined %}{{ form_row(form.role) }}{% endif %}
+                {% else %}
+                    {{ form_row(form.user) }}
+                {% endif %}
             </section>
             <section class="panel">
                 <h2>Contrat et présence</h2>

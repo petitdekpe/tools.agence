@@ -106,6 +106,14 @@ class AccountProvisioner
         $this->em->flush();
     }
 
+    /** E-mail de contrôle : vérifie que le courrier arrive à cette adresse, sans rien modifier sur le compte. @throws TransportExceptionInterface */
+    public function sendTestEmail(User $user): void
+    {
+        $this->send($user, 'Test d\'envoi d\'e-mail – '.$this->site->get()->getHeaderTitle(), 'email/test.txt.twig', [
+            'sentAt' => new \DateTimeImmutable(),
+        ]);
+    }
+
     /** Le compte actif auquel appartient ce jeton, tant qu'il est valide. */
     public function findByRecoveryToken(string $token): ?User
     {

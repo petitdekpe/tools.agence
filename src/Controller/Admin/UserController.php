@@ -219,6 +219,24 @@ class UserController extends AbstractController
         return $this->redirectToRoute('app_admin_users');
     }
 
+    /** Envoie un e-mail de test à l'adresse du compte pour vérifier la configuration du courrier. Ne modifie rien. */
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}/test-mail', name: 'app_admin_user_testmail', methods: 'POST', requirements: ['id' => '\d+'])]
+    public function testMail(Request $request, User $user): Response
+    {
+        $this->checkCsrf($request, 'user_'.$user->getId());
+
+        try {
+            $this->accounts->sendTestEmail($user);
+            $this->activity->log('user.test_mail', ['id' => $user->getId(), 'email' => $user->getEmail()]);
+            $this->addFlash('success', sprintf('E-mail de test envoyé à %s.', $user->getEmail()));
+        } catch (TransportExceptionInterface $e) {
+            $this->addFlash('error', $this->mailFailure($e));
+        }
+
+        return $this->redirectToRoute('app_admin_users');
+    }
+
     private function mailFailure(\Throwable $e): string
     {
         $this->logger->error('Envoi d\'e-mail de compte impossible : '.$e->getMessage());

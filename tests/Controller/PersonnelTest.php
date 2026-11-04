@@ -18,7 +18,7 @@ class PersonnelTest extends AppWebTestCase
             'personnel[firstName]' => 'Mariam',
             'personnel[jobTitle]' => 'Chargée de projet',
             'personnel[department]' => 'Production',
-            'personnel[email]' => 'MARIAM@exemple.bj',
+            'personnel[email]' => 'MARIAM@procom.pro',
             'personnel[hiredAt]' => '2025-03-01',
             'personnel[contractType]' => 'cdi',
         ]));
@@ -26,10 +26,73 @@ class PersonnelTest extends AppWebTestCase
         $person = $this->em->getRepository(Personnel::class)->findOneBy(['lastName' => 'Koffi']);
         self::assertNotNull($person);
         self::assertResponseRedirects('/personnel/'.$person->getId());
-        self::assertSame('mariam@exemple.bj', $person->getEmail());
+        self::assertSame('mariam@procom.pro', $person->getEmail());
         self::assertSame('Mariam KOFFI', $person->getFullName());
         self::assertTrue($person->isActive());
         self::assertNotNull($this->em->getRepository(ActivityLog::class)->findOneBy(['action' => 'personnel.create']));
+    }
+
+    public function testLaCreationDeLaFicheCreeLeCompteEtEnvoieLeMotDePasse(): void
+    {
+        $this->login($this->user(User::ROLE_DIRECTION)); // pas administrateur : pas de choix de rôle, compte Agent
+        $crawler = $this->browser->request('GET', '/personnel/nouveau');
+        self::assertCount(0, $crawler->filter('select[name="personnel[role]"]'));
+        $this->browser->submit($crawler->selectButton('Créer la fiche')->form([
+            'personnel[lastName]' => 'Koffi',
+            'personnel[firstName]' => 'Mariam',
+            'personnel[email]' => 'mariam@procom.pro',
+            'personnel[hiredAt]' => '2025-03-01',
+            'personnel[contractType]' => 'cdi',
+        ]));
+
+        $person = $this->em->getRepository(Personnel::class)->findOneBy(['lastName' => 'Koffi']);
+        $account = $this->em->getRepository(User::class)->findOneBy(['email' => 'mariam@procom.pro']);
+        self::assertNotNull($account);
+        self::assertSame($account->getId(), $person->getUser()?->getId());
+        self::assertSame(User::ROLE_AGENT, $account->getRole()->getCode());
+        self::assertSame('Mariam KOFFI', $account->getFullName());
+        self::assertFalse($account->hasTwoFactor());
+        self::assertEmailCount(1);
+        self::assertEmailAddressContains(self::getMailerEvent()->getMessage(), 'To', 'mariam@procom.pro');
+        self::assertNotNull($this->em->getRepository(ActivityLog::class)->findOneBy(['action' => 'user.create']));
+    }
+
+    public function testUnAdministrateurChoisitLeRoleDuCompte(): void
+    {
+        $this->login($this->user(User::ROLE_ADMIN));
+        $crawler = $this->browser->request('GET', '/personnel/nouveau');
+        $this->browser->submit($crawler->selectButton('Créer la fiche')->form([
+            'personnel[lastName]' => 'Koffi',
+            'personnel[firstName]' => 'Mariam',
+            'personnel[email]' => 'mariam@procom.pro',
+            'personnel[role]' => (string) $this->role(User::ROLE_DIRECTION)->getId(),
+            'personnel[hiredAt]' => '2025-03-01',
+            'personnel[contractType]' => 'cdi',
+        ]));
+
+        self::assertSame(User::ROLE_DIRECTION, $this->em->getRepository(User::class)->findOneBy(['email' => 'mariam@procom.pro'])->getRole()->getCode());
+    }
+
+    public function testLEmailDeLaNouvelleFicheDoitEtreAutoriseEtLibre(): void
+    {
+        $this->login($this->user(User::ROLE_DIRECTION));
+        $crawler = $this->browser->request('GET', '/personnel/nouveau');
+        $fields = ['personnel[lastName]' => 'Koffi', 'personnel[firstName]' => 'Mariam', 'personnel[hiredAt]' => '2025-03-01', 'personnel[contractType]' => 'cdi'];
+
+        $this->browser->submit($crawler->selectButton('Créer la fiche')->form($fields + ['personnel[email]' => '']));
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'L\'e-mail est obligatoire');
+
+        $this->browser->submit($crawler->selectButton('Créer la fiche')->form($fields + ['personnel[email]' => 'mariam@exemple.bj']));
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Seuls les e-mails');
+
+        $this->browser->submit($crawler->selectButton('Créer la fiche')->form($fields + ['personnel[email]' => 'direction@procom.pro'])); // déjà pris par le connecté
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('body', 'Un compte existe déjà avec cet e-mail.');
+
+        self::assertSame(0, $this->em->getRepository(Personnel::class)->count([]));
+        self::assertEmailCount(0);
     }
 
     public function testValidationDesDatesEtDuContrat(): void

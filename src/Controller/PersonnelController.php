@@ -5,16 +5,22 @@ namespace App\Controller;
 use App\Dto\PersonnelFilter;
 use App\Entity\Affectation;
 use App\Entity\Personnel;
+use App\Entity\User;
 use App\Form\PersonnelType;
 use App\Repository\MaterielRepository;
 use App\Repository\PersonnelRepository;
+use App\Repository\RoleRepository;
 use App\Security\Permission;
+use App\Service\AccountProvisioner;
 use App\Service\ActivityLogger;
 use App\Service\ChangeSet;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -28,6 +34,9 @@ class PersonnelController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly PersonnelRepository $personnel,
         private readonly ActivityLogger $activity,
+        private readonly RoleRepository $roles,
+        private readonly AccountProvisioner $accounts,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -62,16 +71,45 @@ class PersonnelController extends AbstractController
     public function new(Request $request): Response
     {
         $person = (new Personnel())->setHiredAt(new \DateTimeImmutable('today'));
-        $form = $this->createForm(PersonnelType::class, $person);
+        // Seul un administrateur choisit le rôle du compte créé avec la fiche ; pour les autres, c'est le rôle Agent.
+        $chooseRole = $this->isGranted('ROLE_ADMIN');
+        $agent = $this->roles->findOneByCode(User::ROLE_AGENT);
+        $form = $this->createForm(PersonnelType::class, $person, ['is_new' => true, 'choose_role' => $chooseRole]);
+        if ($chooseRole) {
+            $form->get('role')->setData($agent);
+        }
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->em->persist($person);
-            $this->em->flush();
-            $this->activity->log('personnel.create', ['id' => $person->getId()] + $person->snapshot());
-            $this->addFlash('success', sprintf('Fiche de %s créée.', $person->getFullName()));
+            $email = (string) $person->getEmail();
+            if ($this->em->getRepository(User::class)->findOneBy(['email' => $email])) {
+                $form->get('email')->addError(new FormError('Un compte existe déjà avec cet e-mail.'));
+            } else {
+                $role = $chooseRole ? $form->get('role')->getData() : $agent;
+                try {
+                    $this->em->persist($person);
+                    // Une personne déjà partie à la création n'a pas besoin de compte.
+                    $user = $person->isActive() ? $this->accounts->createAccount($person, $email, $role) : null;
+                    $this->em->flush();
+                } catch (TransportExceptionInterface $e) {
+                    $this->em->detach($person);
+                    $this->logger->error('Envoi d\'e-mail de compte impossible : '.$e->getMessage());
+                    $form->addError(new FormError('L\'e-mail n\'a pas pu être envoyé (vérifiez MAILER_DSN). Ni la fiche ni le compte n\'ont été créés.'));
+                    $user = false;
+                }
 
-            return $this->redirectToRoute('app_personnel_show', ['id' => $person->getId()]);
+                if (false !== $user) {
+                    $this->activity->log('personnel.create', ['id' => $person->getId()] + $person->snapshot());
+                    if ($user) {
+                        $this->activity->log('user.create', ['id' => $user->getId(), 'email' => $email, 'role' => $user->getRoleLabel(), 'fiche' => $person->getId(), 'mot_de_passe_envoye' => true]);
+                    }
+                    $this->addFlash('success', $user
+                        ? sprintf('Fiche de %s créée. Un compte a été créé et le mot de passe temporaire envoyé à %s (valable %d h).', $person->getFullName(), $email, AccountProvisioner::PASSWORD_VALID_HOURS)
+                        : sprintf('Fiche de %s créée (aucun compte : la personne est déjà partie).', $person->getFullName()));
+
+                    return $this->redirectToRoute('app_personnel_show', ['id' => $person->getId()]);
+                }
+            }
         }
 
         return $this->render('personnel/form.html.twig', ['form' => $form, 'person' => $person, 'isNew' => true]);
