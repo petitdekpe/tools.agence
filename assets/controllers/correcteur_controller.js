@@ -1,16 +1,34 @@
 import { Controller } from '@hotwired/stimulus';
 
-export default class extends Controller {
-    static targets = ['list', 'thread', 'input', 'status', 'send', 'crumb'];
-    static values = { api: String, token: String };
+// Une remarque de la réponse : « **N. 🔴 … .** » (même expression que RemarkParser côté serveur).
+const REMARK = /^\*\*\s*(?:Carte\s*\d+\s*[—–-]\s*)?\d+\.\s/u;
+const SUGGEST_MIN = 40; // caractères saisis avant de chercher un dossier
+const SUGGEST_DELAY = 700;
 
-    items = [];
-    current = null; // correction ouverte (détail complet) ou null
+export default class extends Controller {
+    static targets = [
+        'dossierList', 'memoryList', 'memoryScope', 'thread', 'input', 'status', 'send', 'crumb',
+        'dossier', 'datalist', 'suggestion', 'banner', 'bannerText',
+    ];
+    static values = { corrections: String, dossiers: String, suggest: String, memory: String, admin: Boolean, token: String };
+
+    items = []; // relectures affichées, de la plus ancienne à la plus récente
+    hasMore = false;
+    dossiers = [];
+    filter = { mode: 'all', name: '' }; // all | none | dossier
+    revision = null; // relecture dont le texte saisi est une version révisée
+    suggested = null;
+    suggestTimer = null;
+    suggestSeq = 0;
     busy = false;
 
-    connect() {
-        this.showEmpty();
-        this.loadList();
+    async connect() {
+        await Promise.all([this.loadDossiers(), this.loadThread()]);
+        this.loadMemory();
+    }
+
+    disconnect() {
+        clearTimeout(this.suggestTimer);
     }
 
     // ---------- API ----------
@@ -36,13 +54,66 @@ export default class extends Controller {
         return data;
     }
 
-    async loadList() {
+    threadQuery(before = null) {
+        const params = new URLSearchParams();
+        if ('none' === this.filter.mode) params.set('none', '1');
+        if ('dossier' === this.filter.mode) params.set('dossier', this.filter.name);
+        if (before) params.set('before', before);
+        const query = params.toString();
+
+        return this.correctionsValue + (query ? '?' + query : '');
+    }
+
+    async loadThread() {
         try {
-            this.items = await this.request(this.apiValue);
-        } catch {
+            const page = await this.request(this.threadQuery());
+            this.items = page.items;
+            this.hasMore = page.hasMore;
+        } catch (e) {
             this.items = [];
+            this.hasMore = false;
+            this.setStatus(e.message);
         }
-        this.renderList();
+        this.renderThread({ bottom: true });
+        this.renderCrumb();
+    }
+
+    async loadMore() {
+        if (!this.items.length) return;
+        try {
+            const page = await this.request(this.threadQuery(this.items[0].id));
+            const before = this.threadTarget.scrollHeight;
+            this.items = [...page.items, ...this.items];
+            this.hasMore = page.hasMore;
+            this.renderThread();
+            this.threadTarget.scrollTop += this.threadTarget.scrollHeight - before; // reste sur ce qu'on lisait
+        } catch (e) {
+            this.setStatus(e.message);
+        }
+    }
+
+    async loadDossiers() {
+        try {
+            this.dossiers = await this.request(this.dossiersValue);
+        } catch {
+            this.dossiers = [];
+        }
+        this.renderDossiers();
+    }
+
+    async loadMemory() {
+        try {
+            const dossier = this.currentDossier();
+            this.memoryScopeTarget.textContent = dossier ? '· ' + dossier : '';
+            this.renderMemory(await this.request(this.memoryValue + '?dossier=' + encodeURIComponent(dossier)));
+        } catch {
+            this.renderMemory([]);
+        }
+    }
+
+    // Le dossier auquel s'applique la mémoire affichée : celui de la zone de saisie, sinon celui qu'on consulte.
+    currentDossier() {
+        return this.dossierTarget.value.trim() || ('dossier' === this.filter.mode ? this.filter.name : '');
     }
 
     // ---------- Actions ----------
@@ -54,24 +125,25 @@ export default class extends Controller {
         }
     }
 
-    newChat() {
-        this.current = null;
-        this.inputTarget.value = '';
-        this.crumbTarget.textContent = '';
-        this.showEmpty();
-        this.renderList();
-        this.inputTarget.focus();
+    selectAll() {
+        this.setFilter({ mode: 'all', name: '' });
     }
 
-    async open(id) {
-        if (this.busy) return;
-        try {
-            this.current = await this.request(`${this.apiValue}/${id}`);
-            this.renderThread();
-            this.renderList();
-        } catch (e) {
-            this.setStatus(e.message);
-        }
+    selectNone() {
+        this.setFilter({ mode: 'none', name: '' });
+    }
+
+    selectDossier(name) {
+        this.setFilter({ mode: 'dossier', name });
+    }
+
+    async setFilter(filter) {
+        this.filter = filter;
+        if ('dossier' === filter.mode && !this.revision) this.dossierTarget.value = filter.name;
+        if ('none' === filter.mode && !this.revision) this.dossierTarget.value = '';
+        this.renderDossiers();
+        await this.loadThread();
+        this.loadMemory();
     }
 
     async submit(event) {
@@ -83,96 +155,187 @@ export default class extends Controller {
             return;
         }
 
-        // Un texte saisi pendant qu'une correction est ouverte crée une nouvelle correction.
-        this.current = null;
+        const body = { text, dossier: this.dossierTarget.value.trim() };
+        if (this.revision) body.revisionOf = this.revision.id;
+
         this.renderPending(text);
         this.setBusy(true);
+        let error = null;
         try {
-            this.current = await this.request(this.apiValue, 'POST', { text });
+            const item = await this.request(this.correctionsValue, 'POST', body);
             this.inputTarget.value = '';
-            await this.loadList();
-            this.renderThread();
+            this.cancelRevision();
+            this.hideSuggestion();
+            // Une relecture qui n'entre pas dans le filtre affiché : on passe au filtre qui la contient.
+            if ('dossier' === this.filter.mode && item.dossier !== this.filter.name) {
+                this.filter = item.dossier ? { mode: 'dossier', name: item.dossier } : { mode: 'all', name: '' };
+            } else if ('none' === this.filter.mode && item.dossier) {
+                this.filter = { mode: 'dossier', name: item.dossier };
+            }
+            await Promise.all([this.loadThread(), this.loadDossiers()]);
+            this.loadMemory();
         } catch (e) {
-            this.showEmpty();
-            this.setStatus(e.message);
+            error = e.message;
+            this.renderThread({ bottom: true });
         } finally {
             this.setBusy(false);
         }
+        // Après setBusy, qui remet le message d'aide : sinon l'erreur disparaîtrait aussitôt.
+        if (error) this.setStatus(error);
     }
 
-    startEdit() {
-        const bubble = this.threadTarget.querySelector('.bubble');
-        if (!bubble || !this.current) return;
-        bubble.classList.add('editing');
-        bubble.innerHTML = '';
-
-        const area = document.createElement('textarea');
-        area.value = this.current.text;
-        area.rows = Math.min(14, Math.max(4, this.current.text.split('\n').length + 1));
-        area.maxLength = 20000;
-
-        const row = document.createElement('div');
-        row.className = 'edit-actions';
-        const cancel = this.button('Annuler', 'ghost', () => this.renderThread());
-        const save = this.button('Enregistrer et relire', 'btn-mini', () => this.saveEdit(area.value));
-        row.append(cancel, save);
-        bubble.append(area, row);
-        area.focus();
-    }
-
-    async saveEdit(text) {
-        if (this.busy || !this.current) return;
-        const id = this.current.id;
-        const previous = this.current;
-        this.setBusy(true);
-        this.renderPending(text.trim(), true);
-        try {
-            this.current = await this.request(`${this.apiValue}/${id}`, 'PUT', { text });
-            await this.loadList();
-        } catch (e) {
-            this.current = previous;
-            this.setStatus(e.message);
-        } finally {
-            this.setBusy(false);
-            this.renderThread();
-        }
-    }
-
-    async rename(id, event) {
-        event.stopPropagation();
+    revise(id) {
         const item = this.items.find((i) => i.id === id);
-        const title = window.prompt('Nouveau titre :', item?.title ?? '');
-        if (null === title || !title.trim()) return;
+        if (!item || this.busy) return;
+        this.revision = item;
+        this.inputTarget.value = item.text;
+        this.dossierTarget.value = item.dossier || '';
+        this.bannerTextTarget.textContent = '↻ Version révisée de « ' + item.title + ' »';
+        this.bannerTarget.hidden = false;
+        this.hideSuggestion();
+        this.inputTarget.focus();
+        this.loadMemory();
+    }
+
+    cancelRevision() {
+        this.revision = null;
+        this.bannerTarget.hidden = true;
+    }
+
+    async remove(id) {
+        if (!window.confirm('Supprimer cette relecture ? La mémoire qui en vient est conservée.')) return;
         try {
-            const updated = await this.request(`${this.apiValue}/${id}`, 'PUT', { title });
-            if (this.current?.id === id) this.current.title = updated.title;
-            await this.loadList();
+            await this.request(`${this.correctionsValue}/${id}`, 'DELETE');
+            if (this.revision?.id === id) this.cancelRevision();
+            this.items = this.items.filter((i) => i.id !== id);
             this.renderThread();
+            await this.loadDossiers();
+            this.loadMemory();
         } catch (e) {
             this.setStatus(e.message);
         }
     }
 
-    async remove(id, event) {
-        event.stopPropagation();
-        if (!window.confirm('Supprimer cette correction ?')) return;
+    async moveToDossier(id) {
+        const item = this.items.find((i) => i.id === id);
+        const name = window.prompt('Dossier (laisser vide pour aucun) :', item?.dossier ?? '');
+        if (null === name) return;
         try {
-            await this.request(`${this.apiValue}/${id}`, 'DELETE');
-            if (this.current?.id === id) this.newChat();
-            await this.loadList();
+            await this.request(`${this.correctionsValue}/${id}`, 'PUT', { dossier: name });
+            await Promise.all([this.loadThread(), this.loadDossiers()]);
+            this.loadMemory();
         } catch (e) {
             this.setStatus(e.message);
         }
     }
 
-    async copy(button) {
+    async memorize(item, n, action) {
         try {
-            await navigator.clipboard.writeText(this.current.result);
+            const entry = await this.request(`${this.correctionsValue}/${item.id}/remarks/${n}/memory`, 'POST', { action });
+            item.memo = { ...item.memo, [n]: { id: entry.id, action } };
+            this.rerender();
+            this.loadDossiers();
+            this.loadMemory();
+        } catch (e) {
+            this.setStatus(e.message);
+        }
+    }
+
+    async unmemorize(item, n) {
+        const memo = item.memo[n];
+        if (!memo) return;
+        try {
+            await this.request(`${this.memoryValue}/${memo.id}`, 'DELETE');
+            const rest = { ...item.memo };
+            delete rest[n];
+            item.memo = rest;
+            this.rerender();
+            this.loadMemory();
+        } catch (e) {
+            this.setStatus(e.message);
+        }
+    }
+
+    async forget(entry) {
+        try {
+            await this.request(`${this.memoryValue}/${entry.id}`, 'DELETE');
+            // Les boutons « Retenu » des remarques d'où venait l'entrée redeviennent actifs.
+            for (const item of this.items) {
+                item.memo = Object.fromEntries(Object.entries(item.memo).filter(([, m]) => m.id !== entry.id));
+            }
+            this.rerender();
+            this.loadMemory();
+        } catch (e) {
+            this.setStatus(e.message);
+        }
+    }
+
+    async share(entry) {
+        if (!window.confirm('Partager cette règle avec toute l\'équipe ? Elle vaudra pour tous les dossiers de tous les utilisateurs.')) return;
+        try {
+            await this.request(`${this.memoryValue}/${entry.id}/share`, 'POST');
+            this.loadMemory();
+        } catch (e) {
+            this.setStatus(e.message);
+        }
+    }
+
+    async copy(item, button) {
+        try {
+            await navigator.clipboard.writeText(item.result);
             button.textContent = 'Copié ✓';
             setTimeout(() => (button.textContent = 'Copier'), 1500);
         } catch {
             /* presse-papiers indisponible */
         }
+    }
+
+    // ---------- Dossier suggéré ----------
+
+    textChanged() {
+        clearTimeout(this.suggestTimer);
+        if (this.dossierTarget.value.trim() || this.inputTarget.value.trim().length < SUGGEST_MIN) {
+            this.hideSuggestion();
+            return;
+        }
+        this.suggestTimer = setTimeout(() => this.suggestDossier(), SUGGEST_DELAY);
+    }
+
+    dossierChanged() {
+        if (this.dossierTarget.value.trim()) this.hideSuggestion();
+        else this.textChanged();
+        clearTimeout(this.memoryTimer);
+        this.memoryTimer = setTimeout(() => this.loadMemory(), 300);
+    }
+
+    async suggestDossier() {
+        const seq = ++this.suggestSeq;
+        try {
+            const { dossier } = await this.request(this.suggestValue, 'POST', { text: this.inputTarget.value });
+            if (seq !== this.suggestSeq || this.dossierTarget.value.trim()) return;
+            if (dossier) {
+                this.suggested = dossier;
+                this.suggestionTarget.textContent = 'Dossier suggéré : ' + dossier + ' — utiliser';
+                this.suggestionTarget.hidden = false;
+            } else {
+                this.hideSuggestion();
+            }
+        } catch {
+            this.hideSuggestion();
+        }
+    }
+
+    useSuggestion() {
+        if (!this.suggested) return;
+        this.dossierTarget.value = this.suggested;
+        this.hideSuggestion();
+        this.loadMemory();
+    }
+
+    hideSuggestion() {
+        this.suggestSeq++;
+        this.suggested = null;
+        this.suggestionTarget.hidden = true;
     }
 
     // ---------- Rendu ----------
@@ -207,30 +370,61 @@ export default class extends Controller {
         return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     }
 
-    renderList() {
-        this.listTarget.innerHTML = '';
-        if (!this.items.length) {
-            this.listTarget.append(this.el('li', 'history-empty', 'Aucune correction pour le moment.'));
+    renderCrumb() {
+        const label = { all: '', none: '/ Sans dossier', dossier: '/ ' + this.filter.name }[this.filter.mode];
+        this.crumbTarget.textContent = label;
+    }
+
+    renderDossiers() {
+        const list = this.dossierListTarget;
+        list.innerHTML = '';
+        this.datalistTarget.innerHTML = '';
+
+        const entry = (label, count, active, onClick) => {
+            const li = this.el('li', 'history-item' + (active ? ' active' : ''));
+            li.addEventListener('click', onClick);
+            const text = this.el('div', 'history-text');
+            text.append(this.el('span', 'history-title', label));
+            li.append(text, this.el('small', 'history-count', null === count ? '' : String(count)));
+            list.append(li);
+        };
+
+        entry('Tous les posts', null, 'all' === this.filter.mode, () => this.selectAll());
+        for (const d of this.dossiers) {
+            entry(d.name, d.count, 'dossier' === this.filter.mode && this.filter.name.toLowerCase() === d.name.toLowerCase(), () => this.selectDossier(d.name));
+            const option = document.createElement('option');
+            option.value = d.name;
+            this.datalistTarget.append(option);
+        }
+        entry('Sans dossier', null, 'none' === this.filter.mode, () => this.selectNone());
+    }
+
+    renderMemory(entries) {
+        const list = this.memoryListTarget;
+        list.innerHTML = '';
+        if (!entries.length) {
+            list.append(this.el('li', 'history-empty', 'Rien de retenu. Utilisez « Retenir » ou « Ignorer » sur une remarque.'));
             return;
         }
-        for (const item of this.items) {
-            const li = this.el('li', 'history-item' + (this.current?.id === item.id ? ' active' : ''));
-            li.addEventListener('click', () => this.open(item.id));
+        for (const entry of entries) {
+            const li = this.el('li', 'memory-item' + (entry.shared ? ' shared' : '') + ('exclusion' === entry.kind ? ' exclusion' : ''));
+            const text = this.el('span', 'memory-text', entry.content);
+            if (entry.shared) text.prepend(this.el('em', 'memory-tag', 'Équipe'));
+            li.append(text);
 
-            const text = this.el('div', 'history-text');
-            text.append(this.el('span', 'history-title', item.title), this.el('small', null, this.formatDate(item.updatedAt)));
-
-            const tools = this.el('div', 'history-tools');
-            const edit = this.el('button', null, '✎');
-            edit.title = 'Renommer';
-            edit.addEventListener('click', (e) => this.rename(item.id, e));
-            const del = this.el('button', null, '✕');
-            del.title = 'Supprimer';
-            del.addEventListener('click', (e) => this.remove(item.id, e));
-            tools.append(edit, del);
-
-            li.append(text, tools);
-            this.listTarget.append(li);
+            const tools = this.el('div', 'memory-tools');
+            if (this.adminValue && !entry.shared) {
+                const share = this.button('⇪', null, () => this.share(entry));
+                share.title = 'Partager avec l\'équipe';
+                tools.append(share);
+            }
+            if (entry.canManage) {
+                const del = this.button('✕', null, () => this.forget(entry));
+                del.title = 'Retirer de la mémoire';
+                tools.append(del);
+            }
+            li.append(tools);
+            list.append(li);
         }
     }
 
@@ -238,66 +432,125 @@ export default class extends Controller {
         this.threadTarget.innerHTML = '';
         const empty = this.el('div', 'empty');
         empty.append(
-            this.el('div', 'empty-icon', '✍️'),
+            this.el('div', 'empty-icon', '✎'),
             this.el('h2', null, 'Que faut-il relire ?'),
-            this.el('p', null, 'Collez un post, ou le texte d\'un visuel carte par carte. Vous obtenez un verdict et des remarques numérotées.'),
+            this.el('p', null, 'Collez un post, ou le texte d\'un visuel carte par carte. Vos relectures s\'enchaînent ici, et le correcteur se souvient de ce que vous retenez.'),
         );
         this.threadTarget.append(empty);
     }
 
-    userRow(text, editable) {
-        const row = this.el('div', 'row row-user');
-        const bubble = this.el('div', 'bubble', text);
-        const wrap = this.el('div', 'bubble-wrap');
-        wrap.append(bubble);
-        if (editable) {
-            wrap.append(this.button('✎ Modifier', 'ghost small', () => this.startEdit()));
+    // Redessine le fil sans bouger la lecture.
+    rerender() {
+        const top = this.threadTarget.scrollTop;
+        this.renderThread();
+        this.threadTarget.scrollTop = top;
+    }
+
+    renderThread({ bottom = false } = {}) {
+        this.threadTarget.innerHTML = '';
+        if (!this.items.length) {
+            this.showEmpty();
+            return;
         }
+        if (this.hasMore) {
+            this.threadTarget.append(this.button('Voir les relectures précédentes', 'more-btn', () => this.loadMore()));
+        }
+        for (const item of this.items) {
+            this.threadTarget.append(this.userRow(item), this.botRow(item));
+        }
+        if (bottom) this.threadTarget.scrollTop = this.threadTarget.scrollHeight;
+    }
+
+    renderPending(text) {
+        const row = this.el('div', 'row row-bot');
+        const card = this.el('div', 'answer');
+        card.append(this.el('strong', null, 'Correcteur média'), this.el('p', 'typing', 'Relecture en cours…'));
+        row.append(this.el('div', 'bot-icon', 'IA'), card);
+
+        const user = this.el('div', 'row row-user');
+        const wrap = this.el('div', 'bubble-wrap');
+        wrap.append(this.el('div', 'bubble', text));
+        user.append(wrap, this.el('div', 'avatar', 'Vous'));
+
+        if (!this.items.length) this.threadTarget.innerHTML = '';
+        this.threadTarget.append(user, row);
+        this.threadTarget.scrollTop = this.threadTarget.scrollHeight;
+    }
+
+    userRow(item) {
+        const row = this.el('div', 'row row-user');
+        const wrap = this.el('div', 'bubble-wrap');
+        wrap.append(this.el('div', 'bubble', item.text));
+
+        const meta = this.el('div', 'row-meta');
+        const chip = this.button(item.dossier || 'Sans dossier', 'dossier-chip' + (item.dossier ? '' : ' none'), () => this.moveToDossier(item.id));
+        chip.title = 'Changer de dossier';
+        meta.append(chip, this.el('small', null, this.formatDate(item.createdAt)));
+        meta.append(this.button('↻ Version révisée', 'ghost small', () => this.revise(item.id)));
+        const del = this.button('✕', 'ghost small', () => this.remove(item.id));
+        del.title = 'Supprimer';
+        meta.append(del);
+        wrap.append(meta);
+
         row.append(wrap, this.el('div', 'avatar', 'Vous'));
 
         return row;
     }
 
-    renderPending(text, keepTitle = false) {
-        this.threadTarget.innerHTML = '';
-        const row = this.el('div', 'row row-bot');
-        const card = this.el('div', 'answer');
-        card.append(this.el('strong', null, 'Correcteur média'), this.el('p', 'typing', 'Relecture en cours…'));
-        row.append(this.el('div', 'bot-icon', '✍️'), card);
-        this.threadTarget.append(this.userRow(text, false), row);
-        if (!keepTitle) this.crumbTarget.textContent = '';
-    }
-
-    renderThread() {
-        const c = this.current;
-        if (!c) return this.showEmpty();
-
-        this.crumbTarget.textContent = '/ ' + c.title;
-        this.threadTarget.innerHTML = '';
-
+    botRow(item) {
         const row = this.el('div', 'row row-bot');
         const card = this.el('div', 'answer');
         card.append(this.el('strong', null, 'Correcteur média'));
-        const body = this.el('div', 'answer-body');
-        body.innerHTML = this.markdown(c.result);
-        const foot = this.el('div', 'answer-foot');
-        foot.append(this.el('small', null, this.formatDate(c.updatedAt)));
-        const copy = this.button('Copier', 'ghost small', () => this.copy(copy));
-        foot.append(copy);
-        card.append(body, foot);
-        row.append(this.el('div', 'bot-icon', '✍️'), card);
 
-        this.threadTarget.append(this.userRow(c.text, true), row);
-        this.threadTarget.scrollTop = 0;
+        const body = this.el('div', 'answer-body');
+        let n = 0;
+        for (const block of item.result.split(/\n{2,}/)) {
+            const node = this.el('div', 'answer-block');
+            if (/^-{3,}$/.test(block.trim())) {
+                node.append(document.createElement('hr'));
+            } else {
+                const p = this.el('p');
+                p.innerHTML = this.inline(block);
+                node.append(p);
+                if (REMARK.test(block.trim())) node.append(this.remarkActions(item, ++n));
+            }
+            body.append(node);
+        }
+
+        const foot = this.el('div', 'answer-foot');
+        foot.append(this.el('small', null, this.formatDate(item.updatedAt)));
+        const copy = this.button('Copier', 'ghost small', () => this.copy(item, copy));
+        foot.append(copy);
+
+        card.append(body, foot);
+        row.append(this.el('div', 'bot-icon', 'IA'), card);
+
+        return row;
+    }
+
+    // Retenir ou ignorer une remarque ; une fois fait, l'état s'affiche et peut être annulé.
+    remarkActions(item, n) {
+        const bar = this.el('div', 'memo-actions');
+        const memo = item.memo[n];
+        if (memo) {
+            bar.append(this.el('span', 'memo-state', 'retain' === memo.action ? 'Retenu ✓' : 'Ne sera plus signalé ✓'));
+            bar.append(this.button('Annuler', 'ghost small', () => this.unmemorize(item, n)));
+
+            return bar;
+        }
+        const retain = this.button('Retenir', 'ghost small', () => this.memorize(item, n, 'retain'));
+        retain.title = 'Appliquer ce choix aux prochains textes du dossier';
+        const ignore = this.button('Ignorer', 'ghost small', () => this.memorize(item, n, 'ignore'));
+        ignore.title = 'Ne plus signaler ce point';
+        bar.append(retain, ignore);
+
+        return bar;
     }
 
     // Rendu minimal et sûr : échappement HTML, puis **gras** et sauts de ligne.
-    markdown(source) {
+    inline(source) {
         const escaped = source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        return escaped
-            .split(/\n{2,}/)
-            .map((block) => (/^-{3,}$/.test(block.trim()) ? '<hr>' : `<p>${block.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>').replace(/\n/g, '<br>')}</p>`))
-            .join('');
+        return escaped.replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>').replace(/\n/g, '<br>');
     }
 }

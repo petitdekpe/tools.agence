@@ -3,6 +3,7 @@
 {% block page_title %}{{ item.designation }}{% endblock %}
 {% block tool_actions %}
     <a class="ghost" href="{{ path('app_materiel') }}">← Retour à l'inventaire</a>
+    {% if is_granted('ticket.create') and not item.reformed %}<a class="ghost" href="{{ path('app_ticket_new', {type: 'panne', materiel: item.id}) }}">Signaler une panne</a>{% endif %}
     {% if is_granted('materiel.edit') %}<a class="btn" href="{{ path('app_materiel_edit', {id: item.id}) }}">Modifier</a>{% endif %}
 {% endblock %}
 

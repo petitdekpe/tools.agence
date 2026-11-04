@@ -2,33 +2,39 @@
 
 {% block title %}Connexion · {{ site_settings().headerTitle }}{% endblock %}
 {% block body_class %}page-login{% endblock %}
-{% block header %}{% endblock %}
-
-{% block body %}
+{% block layout %}
+<div class="login-wrap">
     <div class="login-card">
-        {% if site_settings().logoPath %}<img class="login-logo" src="{{ asset('uploads/' ~ site_settings().logoPath) }}" alt="">{% endif %}
-        <h1>{{ site_settings().headerTitle }}</h1>
-        <p class="muted">Connectez-vous avec votre e-mail professionnel et le code de Google Authenticator.</p>
+        {% include 'security/_brand.html.twig' %}
+        <h1>Bon retour parmi nous</h1>
+        <p class="login-sub">Connectez-vous avec votre e-mail professionnel et le code de Google Authenticator.</p>
 
         <form method="post" class="form">
             {% if error %}<div class="alert error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>{% endif %}
             {% for message in app.flashes('success') %}<div class="alert success">{{ message }}</div>{% endfor %}
 
-            <label for="email">E-mail</label>
+            <label for="email">Adresse e-mail</label>
             <input type="email" id="email" name="email" value="{{ last_username }}" autocomplete="username" required autofocus>
 
             <label for="code">Code Google Authenticator</label>
             <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" placeholder="123 456" class="code-input">
 
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <button class="btn btn-block" type="submit">Se connecter</button>
+
+            <span class="or">ou</span>
+
             <details class="pwd-toggle"{{ error ? ' open' }}>
-                <summary>Utiliser un mot de passe</summary>
+                <summary class="btn-outline">Utiliser un mot de passe</summary>
                 <p class="muted small-note">Pour une première connexion, saisissez le mot de passe initial et laissez le code vide.</p>
                 <label for="password">Mot de passe</label>
                 <input type="password" id="password" name="password" autocomplete="current-password">
+                <button class="btn btn-block" type="submit">Continuer avec le mot de passe</button>
             </details>
-
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-            <button class="btn" type="submit">Se connecter</button>
         </form>
+
+        <p class="login-alt">Google Authenticator indisponible ?</p>
+        <p class="login-alt-link"><a href="{{ path('app_recovery_request') }}">Récupérer l'accès</a></p>
     </div>
+</div>
 {% endblock %}

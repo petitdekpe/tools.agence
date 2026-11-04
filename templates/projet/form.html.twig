@@ -1,0 +1,20 @@
+{% extends 'projet/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouveau projet' : 'Modifier ' ~ projet.nom }}{% endblock %}
+{% block pm_actions %}<a class="ghost" href="{{ isNew ? path('app_projets') : path('app_projet_show', {id: projet.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel wide">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.nom) }}
+            {{ form_row(form.client) }}
+            {{ form_row(form.responsable) }}
+            {{ form_row(form.statut) }}
+            {{ form_row(form.dateDebut) }}
+            {{ form_row(form.echeance) }}
+            {{ form_row(form.description) }}
+            <button class="btn" type="submit">{{ isNew ? 'Créer le projet' : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

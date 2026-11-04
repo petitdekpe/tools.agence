@@ -1,0 +1,22 @@
+<section class="stats">
+    <a class="stat" href="{{ path('app_publications', {statut: 'relecture'}) }}">
+        <span class="stat-label">À relire et valider</span>
+        <strong>{{ dashboard.toReview }}</strong>
+        <small>publication{{ dashboard.toReview > 1 ? 's' }} en relecture</small>
+    </a>
+    <a class="stat" href="{{ path('app_publications', {from: 'monday this week'|date('Y-m-d'), to: 'sunday this week'|date('Y-m-d')}) }}">
+        <span class="stat-label">Cette semaine</span>
+        <strong>{{ dashboard.thisWeek }}</strong>
+        <small>publication{{ dashboard.thisWeek > 1 ? 's' }} prévue{{ dashboard.thisWeek > 1 ? 's' }}</small>
+    </a>
+    <a class="stat" href="{{ path('app_publications', {statut: 'encours', to: 'yesterday'|date('Y-m-d')}) }}">
+        <span class="stat-label">En retard</span>
+        <strong>{{ dashboard.late }}</strong>
+        <small>date passée, pas encore sortie{{ dashboard.late > 1 ? 's' }}</small>
+    </a>
+    <a class="stat" href="{{ path('app_publications', {statut: 'publie', from: 'now'|date('Y-m-01')}) }}">
+        <span class="stat-label">Publiées ce mois-ci</span>
+        <strong>{{ dashboard.publishedThisMonth }}</strong>
+        <small>depuis le début du mois</small>
+    </a>
+</section>

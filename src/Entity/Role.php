@@ -21,6 +21,10 @@ class Role
         User::ROLE_ADMIN => ['Admin', 'Accès complet : utilisateurs, rôles, réglages et tous les outils. Ce rôle ne peut ni être restreint ni supprimé.'],
         User::ROLE_DIRECTION => ['Direction', 'Utilise les outils, gère le personnel et consulte l\'administration en lecture seule.'],
         User::ROLE_AGENT => ['Agent', 'Utilise les outils au quotidien, sans accès à l\'administration.'],
+        User::ROLE_ADMINISTRATION => ['Administration', 'Fonctionnement de l\'organisation : espace d\'administration en lecture (tableau de bord, utilisateurs, journal), personnel, congés et suivi des pannes.'],
+        User::ROLE_RH_FINANCE => ['RH et finance', 'Personnel et congés, encaissements, factures et devis, dépenses et décaissements.'],
+        User::ROLE_MATERIEL => ['Matériel', 'Inventaire du matériel, remises et restitutions, traitement des pannes et des demandes.'],
+        User::ROLE_STRATEGIE => ['Stratégie', 'Média et production : correcteur, projets et missions (programmation), calendrier éditorial et CRM.'],
     ];
 
     #[ORM\Id]

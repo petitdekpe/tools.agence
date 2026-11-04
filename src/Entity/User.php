@@ -22,6 +22,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
     public const ROLE_AGENT = 'ROLE_AGENT';
     public const ROLE_ADMIN = 'ROLE_ADMIN';
     public const ROLE_DIRECTION = 'ROLE_DIRECTION';
+    public const ROLE_ADMINISTRATION = 'ROLE_ADMINISTRATION';
+    public const ROLE_RH_FINANCE = 'ROLE_RH_FINANCE';
+    public const ROLE_MATERIEL = 'ROLE_MATERIEL';
+    public const ROLE_STRATEGIE = 'ROLE_STRATEGIE';
 
     /** Rôle de base de tout compte connecté, quel que soit son rôle métier. */
     public const ROLE_USER = 'ROLE_USER';
@@ -63,6 +67,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $totpLastCodeAt = null;
+
+    /** Fin de validité du mot de passe temporaire envoyé par e-mail ; null : pas d'échéance. */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $passwordExpiresAt = null;
+
+    /** Empreinte du lien de récupération (authentificateur indisponible) ; le jeton lui-même n'est jamais stocké. */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $recoveryTokenHash = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $recoveryTokenExpiresAt = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -234,11 +249,48 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
         return $this->password;
     }
 
+    /** Un mot de passe fixé à la main n'expire pas ; l'échéance d'un mot de passe temporaire se pose ensuite. */
     public function setPassword(string $password): static
     {
         $this->password = $password;
+        $this->passwordExpiresAt = null;
 
         return $this;
+    }
+
+    public function getPasswordExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordExpiresAt;
+    }
+
+    public function setPasswordExpiresAt(?\DateTimeImmutable $passwordExpiresAt): static
+    {
+        $this->passwordExpiresAt = $passwordExpiresAt;
+
+        return $this;
+    }
+
+    public function isPasswordExpired(): bool
+    {
+        return null !== $this->passwordExpiresAt && $this->passwordExpiresAt < new \DateTimeImmutable();
+    }
+
+    public function getRecoveryTokenHash(): ?string
+    {
+        return $this->recoveryTokenHash;
+    }
+
+    public function setRecoveryToken(?string $hash, ?\DateTimeImmutable $expiresAt): static
+    {
+        $this->recoveryTokenHash = $hash;
+        $this->recoveryTokenExpiresAt = $expiresAt;
+
+        return $this;
+    }
+
+    public function hasValidRecoveryToken(): bool
+    {
+        return null !== $this->recoveryTokenHash && null !== $this->recoveryTokenExpiresAt && $this->recoveryTokenExpiresAt > new \DateTimeImmutable();
     }
 
     public function eraseCredentials(): void

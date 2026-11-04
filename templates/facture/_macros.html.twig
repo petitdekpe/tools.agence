@@ -1,0 +1,19 @@
+{# Pastille d'état d'un document. « paid » : montant déjà encaissé (factures). #}
+{% macro state(doc, paid) %}
+    {%- if doc.isFacture -%}
+        {%- if doc.statut == 'brouillon' -%}<span class="chip chip-muted">Brouillon</span>
+        {%- elseif doc.statut == 'annulee' -%}<span class="chip chip-muted">Annulée</span>
+        {%- elseif doc.settlement(paid) == 'soldee' -%}<span class="chip chip-ok">Soldée</span>
+        {%- elseif doc.isOverdue(paid) -%}<span class="chip chip-bad">En retard</span>
+        {%- elseif doc.settlement(paid) == 'partielle' -%}<span class="chip chip-warn">Payée en partie</span>
+        {%- else -%}<span class="chip chip-info">Impayée</span>
+        {%- endif -%}
+    {%- else -%}
+        {%- if doc.statut == 'accepte' -%}<span class="chip chip-ok">Accepté</span>
+        {%- elseif doc.statut == 'refuse' -%}<span class="chip chip-muted">Refusé</span>
+        {%- elseif doc.isExpired -%}<span class="chip chip-bad">Expiré</span>
+        {%- elseif doc.statut == 'envoye' -%}<span class="chip chip-info">Envoyé</span>
+        {%- else -%}<span class="chip chip-muted">Brouillon</span>
+        {%- endif -%}
+    {%- endif -%}
+{% endmacro %}

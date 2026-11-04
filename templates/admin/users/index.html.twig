@@ -42,7 +42,7 @@
                     </td>
                     <td><span class="role role-{{ u.role.code|lower|replace({'role_': ''}) }}">{{ u.roleLabel }}</span></td>
                     <td><span class="status-dot {{ u.active ? 'on' : 'off' }}">{{ u.active ? 'Actif' : 'Désactivé' }}</span></td>
-                    <td><span class="status-dot {{ u.hasTwoFactor ? 'on' : 'wait' }}">{{ u.hasTwoFactor ? 'Activé' : 'À activer' }}</span></td>
+                    <td><span class="status-dot {{ u.hasTwoFactor ? 'on' : 'wait' }}">{{ u.hasTwoFactor ? 'Activé' : 'À activer' }}</span>{% if not u.hasTwoFactor and u.passwordExpiresAt %}<small class="block muted">{{ u.passwordExpired ? 'Mot de passe expiré' : 'Mot de passe valable jusqu\'au ' ~ u.passwordExpiresAt|date('d/m H:i') }}</small>{% endif %}</td>
                     <td class="muted">{{ u.lastLoginAt ? u.lastLoginAt|date('d/m/Y H:i') : 'Jamais' }}</td>
                     {% if is_granted('ROLE_ADMIN') %}
                         <td class="right">
@@ -52,9 +52,14 @@
                                 {% if u != app.user %}
                                     {% if u.hasTwoFactor %}
                                         <form method="post" action="{{ path('app_admin_user_reset2fa', {id: u.id}) }}"
-                                              onsubmit="return confirm('Réinitialiser Google Authenticator de {{ u.fullName|e('js') }} ?')">
+                                              onsubmit="return confirm('Réinitialiser Google Authenticator de {{ u.fullName|e('js') }} ? Un nouveau mot de passe temporaire lui sera envoyé par e-mail.')">
                                             <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
                                             <button class="ghost" type="submit">Réinit. 2FA</button>
+                                        </form>
+                                    {% elseif u.active %}
+                                        <form method="post" action="{{ path('app_admin_user_resend', {id: u.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('user_' ~ u.id) }}">
+                                            <button class="ghost" type="submit">Renvoyer le mot de passe</button>
                                         </form>
                                     {% endif %}
                                     <form method="post" action="{{ path('app_admin_user_toggle', {id: u.id}) }}">

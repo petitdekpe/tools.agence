@@ -1,0 +1,106 @@
+{% extends 'absence/layout.html.twig' %}
+{% import 'absence/_macros.html.twig' as m %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_absences', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    {% set absent = dashboard.absentToday %}
+
+    <section class="stats">
+        <a class="stat" href="{{ path('app_absences', {etat: 'en_attente'}) }}">
+            <span class="stat-label">Demandes à traiter</span>
+            <strong>{{ dashboard.pending }}</strong>
+            <small>en attente de décision</small>
+        </a>
+        <a class="stat" href="{{ path('app_absence_calendar') }}">
+            <span class="stat-label">Absents aujourd'hui</span>
+            <strong>{{ absent|length }}</strong>
+            <small>{% if absent %}{{ absent|slice(0, 3)|map(a => a.personnel.fullName)|join(', ') }}{% if absent|length > 3 %} et {{ absent|length - 3 }} autre{{ absent|length - 3 > 1 ? 's' }}{% endif %}{% else %}toute l'équipe est là{% endif %}</small>
+        </a>
+        <a class="stat" href="{{ path('app_absences', {etat: 'approuvee'}) }}">
+            <span class="stat-label">À venir (30 jours)</span>
+            <strong>{{ dashboard.upcoming }}</strong>
+            <small>absence{{ dashboard.upcoming > 1 ? 's' }} approuvée{{ dashboard.upcoming > 1 ? 's' }}</small>
+        </a>
+        {% if myDays is not null %}
+            <a class="stat" href="{{ path('app_absences', {personnel: mine.id, etat: 'approuvee', annee: year}) }}">
+                <span class="stat-label">Mes jours posés en {{ year }}</span>
+                <strong>{{ myDays }}</strong>
+                <small>jour{{ myDays > 1 ? 's' }} ouvré{{ myDays > 1 ? 's' }} approuvé{{ myDays > 1 ? 's' }}</small>
+            </a>
+        {% endif %}
+    </section>
+
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <select name="etat" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            {% for key, label in constant('App\\Entity\\Absence::STATUTS') %}<option value="{{ key }}" {{ filter.etat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="type" aria-label="Type">
+            <option value="">Tous les types</option>
+            {% for key, label in constant('App\\Entity\\Absence::TYPES') %}<option value="{{ key }}" {{ filter.type == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="personnel" aria-label="Personne">
+            <option value="">Toute l'équipe</option>
+            {% for p in people %}<option value="{{ p.id }}" {{ filter.personnel == p.id ? 'selected' }}>{{ p.fullName }}</option>{% endfor %}
+        </select>
+        <select name="annee" aria-label="Année">
+            <option value="">Toutes les années</option>
+            {% for y in (year + 1)..(year - 3) %}<option value="{{ y }}" {{ filter.annee == y ? 'selected' }}>{{ y }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_absences') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} absence{{ total > 1 ? 's' }}{% if filter.isActive %} (filtrée{{ total > 1 ? 's' }}){% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('personne', 'Personne', filter) }}
+                    {{ _self.sort('type', 'Type', filter) }}
+                    {{ _self.sort('debut', 'Du', filter) }}
+                    <th>Au</th>
+                    {{ _self.sort('jours', 'Jours', filter, 'num') }}
+                    {{ _self.sort('statut', 'Statut', filter) }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for a in rows %}
+                <tr class="{{ a.statut in ['refusee', 'annulee'] ? 'inactive' }}">
+                    <td><a href="{{ path('app_absence_show', {id: a.id}) }}"><strong>{{ a.personnel.fullName }}</strong></a>{% if a.personnel.department %}<small class="block muted">{{ a.personnel.department }}</small>{% endif %}</td>
+                    <td>{{ a.typeLabel }}</td>
+                    <td class="nowrap">{{ a.dateDebut|date('d/m/Y') }}</td>
+                    <td class="nowrap">{{ a.dateFin|date('d/m/Y') }}</td>
+                    <td class="num">{{ a.jours }}</td>
+                    <td>{{ m.state(a) }}</td>
+                    <td class="right"><a class="ghost" href="{{ path('app_absence_show', {id: a.id}) }}">Ouvrir</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="muted">Aucune absence{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="muted small">Les jours comptent du lundi au vendredi ; les jours fériés ne sont pas déduits.</p>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_absences', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_absences', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

@@ -43,6 +43,19 @@
         </div>
 
         <div class="panel">
+            <h2>Consommation du correcteur</h2>
+            <p class="muted">30 derniers jours. Le cache est la part des tokens d'entrée relue à moindre coût : elle doit être élevée dès que le correcteur sert plusieurs fois par jour.</p>
+            {% if usageTotal.n %}
+                <div class="line"><div><strong>Toute l'équipe</strong><small>{{ usageTotal.n }} relecture{{ usageTotal.n > 1 ? 's' }} · entrée {{ usageTotal.input|number_format(0, ',', ' ') }} · cache {{ usageTotal.cacheRead|number_format(0, ',', ' ') }} · sortie {{ usageTotal.output|number_format(0, ',', ' ') }}</small></div><span class="pill">{{ usageTotal.cacheShare is null ? '—' : 'cache ' ~ usageTotal.cacheShare ~ ' %' }}</span></div>
+                {% for u in usage %}
+                    <div class="line"><div><strong>{{ u.name }}</strong><small>{{ u.n }} relecture{{ u.n > 1 ? 's' }} · entrée {{ u.input|number_format(0, ',', ' ') }} · cache {{ u.cacheRead|number_format(0, ',', ' ') }} · sortie {{ u.output|number_format(0, ',', ' ') }}</small></div><span class="pill">{{ u.cacheShare is null ? '—' : 'cache ' ~ u.cacheShare ~ ' %' }}</span></div>
+                {% endfor %}
+            {% else %}
+                <p class="muted">Aucune relecture sur la période.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
             <h2>Dernières connexions</h2>
             {% for u in recentLogins %}
                 <div class="line"><div><strong>{{ u.fullName }}</strong><small>{{ u.roleLabel }}</small></div><span class="muted">{{ u.lastLoginAt|date('d/m/Y H:i') }}</span></div>

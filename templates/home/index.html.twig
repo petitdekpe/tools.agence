@@ -1,18 +1,95 @@
 {% extends 'base.html.twig' %}
+{% import '_icons.html.twig' as i %}
+
+{% block title %}Accueil · {{ site_settings().headerTitle }}{% endblock %}
 
 {% block body %}
     {% for message in app.flashes('error') %}<div class="alert error">{{ message }}</div>{% endfor %}
-    <section class="cards">
-        {% for tool in tools %}
-            <a class="card" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
-                <div class="card-top">
-                    <span class="card-icon tone-{{ tool.color }}">{{ tool.icon }}</span>
-                    <span class="card-arrow" aria-hidden="true">↗</span>
+
+    <div class="page-head">
+        <div>
+            <h1>Bonjour, {{ app.user.fullName|split(' ')|first }}</h1>
+            <p class="page-sub">{{ app.user.roleLabel }}{% if app.user.lastLoginAt %} · dernière connexion le {{ app.user.lastLoginAt|date('d/m/Y à H:i') }}{% endif %}</p>
+        </div>
+    </div>
+
+    {% if stats %}
+        <section class="stats">
+            {% for s in stats %}
+                <a class="stat" href="{{ path(s.route) }}">
+                    <span class="stat-label">{{ s.label }}</span>
+                    <strong>{% if s.unit|default('') == 'fcfa' %}{{ s.value|fcfa_number }} <em>FCFA</em>{% else %}{{ s.value }}{% endif %}</strong>
+                    <small>{{ s.caption }}</small>
+                </a>
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    <section class="bento">
+        <div class="card">
+            <div class="card-head"><h2>Vos outils</h2></div>
+            <div class="rows cards">
+                {% for tool in tools %}
+                    <a class="row-link" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
+                        <span class="row-icon">{{ i.icon(tool.icon, 22) }}</span>
+                        <span class="row-text">
+                            <small>{{ tool.badge }}</small>
+                            <strong>{{ tool.title }}</strong>
+                            <span class="muted">{{ tool.description }}</span>
+                        </span>
+                        <span class="row-arrow">{{ i.icon(tool.external|default(false) ? 'external' : 'arrow-right', 18) }}</span>
+                    </a>
+                {% else %}
+                    <p class="muted">Aucun outil n'est activé pour votre rôle. Contactez un administrateur.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="stack">
+            {% set quick = [] %}
+            {% if is_granted('correcteur.use') %}{% set quick = quick|merge([{label: 'Relire un texte', route: 'app_correcteur'}]) %}{% endif %}
+            {% if is_granted('encaissement.edit') %}{% set quick = quick|merge([{label: 'Enregistrer un encaissement', route: 'app_encaissement_new'}]) %}{% endif %}
+            {% if is_granted('facture.edit') %}{% set quick = quick|merge([{label: 'Créer une facture', route: 'app_facture_new'}]) %}{% endif %}
+            {% if is_granted('projet.edit') %}{% set quick = quick|merge([{label: 'Créer un projet', route: 'app_projet_new'}]) %}{% endif %}
+            {% if is_granted('mission.plan') %}{% set quick = quick|merge([{label: 'Programmer une mission', route: 'app_mission_new'}]) %}{% endif %}
+            {% if is_granted('calendrier.edit') %}{% set quick = quick|merge([{label: 'Planifier une publication', route: 'app_publication_new'}]) %}{% endif %}
+            {% if is_granted('depense.edit') %}{% set quick = quick|merge([{label: 'Enregistrer une dépense', route: 'app_depense_new'}]) %}{% endif %}
+            {% if is_granted('ticket.create') %}{% set quick = quick|merge([{label: 'Signaler une panne', route: 'app_ticket_new'}]) %}{% endif %}
+            {% if is_granted('absence.create') %}{% set quick = quick|merge([{label: 'Poser une absence', route: 'app_absence_new'}]) %}{% endif %}
+            {% if is_granted('personnel.edit') %}{% set quick = quick|merge([{label: 'Ajouter une fiche du personnel', route: 'app_personnel_new'}]) %}{% endif %}
+            {% if is_granted('materiel.edit') %}{% set quick = quick|merge([{label: 'Ajouter du matériel', route: 'app_materiel_new'}]) %}{% endif %}
+            {% if quick %}
+                <div class="card">
+                    <div class="card-head"><h2>Actions rapides</h2></div>
+                    <div class="rows compact">
+                        {% for q in quick %}
+                            <a class="row-link" href="{{ path(q.route) }}"><span class="row-icon sm">{{ i.icon('plus', 16) }}</span><span class="row-text"><strong>{{ q.label }}</strong></span></a>
+                        {% endfor %}
+                    </div>
                 </div>
-                <h2>{{ tool.title }}{% if tool.badge %} <span class="badge">{{ tool.badge }}</span>{% endif %}</h2>
-                <p>{{ tool.description }}</p>
-                <span class="card-cta">Ouvrir l'outil</span>
-            </a>
-        {% endfor %}
+            {% endif %}
+
+            {% if activity is not null %}
+                <div class="card">
+                    <div class="card-head">
+                        <h2>Activité récente</h2>
+                        <a class="see" href="{{ path('app_admin_activity') }}">Voir {{ i.icon('external', 14) }}</a>
+                    </div>
+                    <div class="rows compact">
+                        {% for log in activity %}
+                            <div class="row-link static">
+                                <span class="row-text">
+                                    <small>{{ log.createdAt|date('d/m/Y H:i') }}</small>
+                                    <strong>{{ log.label }}</strong>
+                                    <span class="muted">{{ log.user ? log.user.fullName : (log.userEmail ?: 'Inconnu') }}</span>
+                                </span>
+                            </div>
+                        {% else %}
+                            <p class="muted">Aucune action enregistrée.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
     </section>
 {% endblock %}

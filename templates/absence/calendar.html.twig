@@ -1,0 +1,45 @@
+{% extends 'absence/layout.html.twig' %}
+
+{% set monthNames = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+
+{% block content %}
+    <div class="enc-toolbar">
+        <span class="row-actions">
+            <a class="ghost" href="{{ path('app_absence_calendar', {mois: previous}) }}" aria-label="Mois précédent">← Précédent</a>
+            <strong class="cal-month">{{ monthNames[month|date('n') + 0] }} {{ month|date('Y') }}</strong>
+            <a class="ghost" href="{{ path('app_absence_calendar', {mois: next}) }}" aria-label="Mois suivant">Suivant →</a>
+            <a class="ghost" href="{{ path('app_absence_calendar') }}">Ce mois-ci</a>
+        </span>
+        <span class="cal-legend">
+            {% for key, label in constant('App\\Entity\\Absence::TYPES') %}<span><i class="cal-dot type-{{ key }}"></i>{{ label }}</span>{% endfor %}
+            <span><i class="cal-dot pending"></i>en attente</span>
+        </span>
+    </div>
+
+    <div class="table-card">
+        <table class="cal">
+            <thead>
+                <tr>
+                    <th class="cal-who">Personne</th>
+                    {% for day in days %}<th class="cal-day{{ day.weekend ? ' weekend' }}{{ day.today ? ' today' }}">{{ day.n }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <th class="cal-who" scope="row"><a href="{{ path('app_absences', {personnel: row.person.id}) }}">{{ row.person.fullName }}</a></th>
+                    {% for day in days %}
+                        {% set a = row.cells[day.n]|default(null) %}
+                        <td class="cal-cell{{ day.weekend ? ' weekend' }}{{ day.today ? ' today' }}">
+                            {% if a %}<a href="{{ path('app_absence_show', {id: a.id}) }}" class="cal-bar type-{{ a.type }}{{ a.pending ? ' pending' }}" title="{{ a.typeLabel }} · {{ a.dateDebut|date('d/m') }} au {{ a.dateFin|date('d/m') }}{{ a.pending ? ' (en attente)' }}" aria-label="{{ a.personnel.fullName }}, {{ a.typeLabel }}"></a>{% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% else %}
+                <tr><td class="muted" colspan="{{ days|length + 1 }}">Personne n'est absent en {{ monthNames[month|date('n') + 0] }} {{ month|date('Y') }}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="muted small">Les absences refusées ou annulées ne sont pas affichées. Les week-ends sont grisés.</p>
+{% endblock %}

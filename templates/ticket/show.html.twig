@@ -1,0 +1,76 @@
+{% extends 'ticket/layout.html.twig' %}
+{% import 'ticket/_macros.html.twig' as m %}
+
+{% block page_title %}{{ ticket.reference }}{% endblock %}
+
+{% block ticket_actions %}
+    <a class="ghost" href="{{ path('app_tickets', {type: ticket.type}) }}">← Retour à la liste</a>
+    {% if canEdit and is_granted('ticket.create') %}<a class="btn" href="{{ path('app_ticket_edit', {id: ticket.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('ticket_' ~ ticket.id) %}
+
+    {% if ticket.isPanne and ticket.materiel and ticket.materiel.etat == 'panne' and ticket.active %}
+        <div class="banner warn"><span><strong>{{ ticket.materiel.designation }}</strong> est marqué « en panne » dans l'inventaire.</span></div>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>{{ ticket.titre }}</h2>
+            <dl class="facts">
+                <div><dt>Statut</dt><dd>{{ m.state(ticket) }}</dd></div>
+                <div><dt>Priorité</dt><dd>{{ m.priority(ticket) }}</dd></div>
+                <div><dt>Type</dt><dd>{{ ticket.typeLabel }}</dd></div>
+                {% if ticket.materiel %}
+                    <div><dt>Équipement</dt><dd>
+                        {% if is_granted('materiel.view') %}<a href="{{ path('app_materiel_show', {id: ticket.materiel.id}) }}"><strong>{{ ticket.materiel.designation }}</strong></a>{% else %}<strong>{{ ticket.materiel.designation }}</strong>{% endif %}
+                        {% if ticket.materiel.reference %}<small class="muted">({{ ticket.materiel.reference }})</small>{% endif %}
+                    </dd></div>
+                {% endif %}
+                {% if ticket.categorieLabel %}<div><dt>Catégorie demandée</dt><dd>{{ ticket.categorieLabel }}</dd></div>{% endif %}
+                <div><dt>{{ ticket.isPanne ? 'Signalée par' : 'Demandée par' }}</dt><dd>{{ ticket.createdBy ? ticket.createdBy.fullName : '—' }}</dd></div>
+                <div><dt>Le</dt><dd>{{ ticket.createdAt|date('d/m/Y à H:i') }}</dd></div>
+                {% if ticket.handledBy %}<div><dt>Pris en charge par</dt><dd>{{ ticket.handledBy.fullName }}</dd></div>{% endif %}
+                {% if ticket.closedAt %}<div><dt>Clôturé le</dt><dd>{{ ticket.closedAt|date('d/m/Y à H:i') }}</dd></div>{% endif %}
+                {% if ticket.description %}<div><dt>Détails</dt><dd class="kv-text">{{ ticket.description }}</dd></div>{% endif %}
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2>Traitement</h2>
+            {% if ticket.resolution %}
+                <p class="kv-text">{{ ticket.resolution }}</p>
+            {% elseif not is_granted('ticket.manage') %}
+                <p class="muted">{{ ticket.active ? 'Pas encore de réponse.' : 'Aucune note de traitement.' }}</p>
+            {% endif %}
+
+            {% if is_granted('ticket.manage') %}
+                <form method="post" action="{{ path('app_ticket_status', {id: ticket.id}) }}" class="form">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <label for="statut">Statut</label>
+                    <select id="statut" name="statut">
+                        {% for key, label in statuts %}<option value="{{ key }}" {{ ticket.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+                    </select>
+                    <label for="resolution">Note de traitement</label>
+                    <textarea id="resolution" name="resolution" rows="4" maxlength="2000" placeholder="Ce qui a été fait, ou la raison d'un rejet">{{ ticket.resolution }}</textarea>
+                    {% if ticket.isPanne and ticket.materiel and ticket.materiel.etat == 'panne' %}
+                        <div>
+                            <input type="checkbox" id="remettre" name="remettre_en_etat" value="1">
+                            <label for="remettre">Si la panne est résolue, remettre l'équipement en bon état</label>
+                        </div>
+                    {% endif %}
+                    <button class="btn" type="submit">Mettre à jour</button>
+                </form>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if is_granted('ticket.delete') %}
+        <form method="post" action="{{ path('app_ticket_delete', {id: ticket.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer {{ ticket.reference|e('js') }} ?')">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="ghost danger" type="submit">Supprimer {{ ticket.isPanne ? 'cette panne' : 'cette demande' }}</button>
+        </form>
+    {% endif %}
+{% endblock %}

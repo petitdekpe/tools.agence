@@ -1,0 +1,19 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Dépenses et décaissements : onglets entre la liste et la synthèse. #}
+
+{% block page_title %}Dépenses et décaissements{% endblock %}
+
+{% block page_actions %}
+    {% block dep_actions %}
+        {% if is_granted('depense.edit') %}<a class="btn" href="{{ path('app_depense_new') }}">+ Nouvelle dépense</a>{% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set route = app.request.attributes.get('_route') %}
+    <nav class="tabs">
+        <a href="{{ path('app_depenses') }}" class="{{ route != 'app_depenses_summary' ? 'active' }}">Dépenses</a>
+        <a href="{{ path('app_depenses_summary') }}" class="{{ route == 'app_depenses_summary' ? 'active' }}">Synthèse</a>
+    </nav>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends 'projet/layout.html.twig' %}
+{% import 'projet/_macros.html.twig' as m %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_projets_list', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Projet, description ou client…" aria-label="Rechercher">
+        <select name="client" aria-label="Client">
+            <option value="">Tous les clients</option>
+            {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+        </select>
+        <select name="responsable" aria-label="Responsable">
+            <option value="">Tous les responsables</option>
+            {% for p in people %}<option value="{{ p.id }}" {{ filter.responsable == p.id ? 'selected' }}>{{ p.fullName }}</option>{% endfor %}
+        </select>
+        <select name="statut" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            <option value="ouverts" {{ filter.statut == 'ouverts' ? 'selected' }}>Pas encore terminés</option>
+            {% for key, label in constant('App\\Entity\\Projet::STATUTS') %}<option value="{{ key }}" {{ filter.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_projets_list') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} projet{{ total > 1 ? 's' }}{% if filter.isActive %} (filtré{{ total > 1 ? 's' }}){% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('nom', 'Projet', filter) }}
+                    {{ _self.sort('client', 'Client', filter) }}
+                    <th>Responsable</th>
+                    {{ _self.sort('echeance', 'Échéance', filter) }}
+                    {{ _self.sort('avancement', 'Avancement', filter) }}
+                    {{ _self.sort('statut', 'Statut', filter) }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in rows %}
+                <tr class="{{ p.statut == 'annule' ? 'inactive' }}">
+                    <td><a href="{{ path('app_projet_show', {id: p.id}) }}"><strong>{{ p.nom }}</strong></a></td>
+                    <td>{{ p.client ? p.client.name : 'Interne' }}</td>
+                    <td>{{ p.responsable ? p.responsable.fullName : '—' }}</td>
+                    <td class="nowrap">{{ p.echeance ? p.echeance|date('d/m/Y') : '—' }}</td>
+                    <td style="min-width: 130px">
+                        {% if p.taches|length %}<div class="bar"><div class="bar-fill" style="width: {{ p.progress }}%"></div></div><small class="muted">{{ p.progress }} % · {{ p.taches|length }} tâche{{ p.taches|length > 1 ? 's' }}</small>{% else %}<small class="muted">Aucune tâche</small>{% endif %}
+                    </td>
+                    <td>{{ m.projet_state(p) }}</td>
+                    <td class="right">
+                        <div class="row-actions">
+                            <a class="ghost" href="{{ path('app_projet_show', {id: p.id}) }}">Ouvrir</a>
+                            {% if is_granted('projet.edit') %}<a class="ghost" href="{{ path('app_projet_edit', {id: p.id}) }}">Modifier</a>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="muted">Aucun projet{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_projets_list', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_projets_list', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

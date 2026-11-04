@@ -1,0 +1,105 @@
+{% extends 'depense/layout.html.twig' %}
+
+{% block content %}
+    {% set months_fr = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+
+    <form method="get" class="filters">
+        <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
+        <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.from or filter.to %}<a class="ghost" href="{{ path('app_depenses_summary') }}">Toute la période</a>{% endif %}
+    </form>
+
+    <h2>Par mois</h2>
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    <th>Mois</th>
+                    <th class="num">Dépensé (TTC)</th>
+                    <th class="num">Décaissé</th>
+                    {% if canSeeIncome %}<th class="num">Encaissé (net)</th><th class="num">Solde</th>{% endif %}
+                    {% if canSeeIncome %}<th class="num">TVA à reverser</th>{% endif %}
+                    <th class="num">TVA déductible</th>
+                    {% if canSeeIncome %}<th class="num">TVA nette à payer</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+                {% set parts = r.month|split('-') %}
+                <tr>
+                    <td class="nowrap"><strong>{{ months_fr[parts[1] + 0] }} {{ parts[0] }}</strong>{% if r.n %}<small class="block muted">{{ r.n }} dépense{{ r.n > 1 ? 's' }}</small>{% endif %}</td>
+                    <td class="num">{{ r.expenses|fcfa_number }}</td>
+                    <td class="num">{{ r.paid|fcfa_number }}</td>
+                    {% if canSeeIncome %}
+                        <td class="num">{{ r.income|fcfa_number }}</td>
+                        <td class="num"><strong class="{{ r.balance < 0 ? 'neg' }}">{{ r.balance|fcfa_number }}</strong></td>
+                        <td class="num">{{ r.tvaCollected|fcfa_number }}</td>
+                    {% endif %}
+                    <td class="num">{{ r.tva|fcfa_number }}</td>
+                    {% if canSeeIncome %}<td class="num"><strong>{{ r.tvaNet|fcfa_number }}</strong></td>{% endif %}
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="muted">Aucune dépense sur la période.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if rows %}
+                <tfoot>
+                    <tr>
+                        <td>Total</td>
+                        <td class="num">{{ sums.expenses|fcfa_number }}</td>
+                        <td class="num">{{ sums.paid|fcfa_number }}</td>
+                        {% if canSeeIncome %}<td class="num">{{ sums.income|fcfa_number }}</td><td class="num">{{ sums.balance|fcfa_number }}</td><td class="num">{{ sums.tvaCollected|fcfa_number }}</td>{% endif %}
+                        <td class="num">{{ sums.tva|fcfa_number }}</td>
+                        {% if canSeeIncome %}<td class="num">{{ sums.tvaNet|fcfa_number }}</td>{% endif %}
+                    </tr>
+                </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    <p class="muted small">
+        Montants en FCFA. « Dépensé » compte les dépenses à leur date, « Décaissé » ce qui est payé à sa date de paiement.
+        {% if canSeeIncome %}Solde = encaissé (net reçu) moins décaissé. TVA nette = TVA à reverser sur les encaissements moins TVA déductible sur les dépenses.{% endif %}
+    </p>
+
+    <div class="enc-summary">
+        <section>
+            <h2>Par catégorie</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead><tr><th>Catégorie</th><th class="num">TTC</th><th class="num">TVA déductible</th></tr></thead>
+                    <tbody>
+                    {% for c in byCategory %}
+                        <tr>
+                            <td><a href="{{ path('app_depenses', filter.toQuery(false)|merge({categorie: c.categorie})) }}"><strong>{{ categories[c.categorie]|default(c.categorie) }}</strong></a><small class="block muted">{{ c.n }} dépense{{ c.n > 1 ? 's' }}</small></td>
+                            <td class="num">{{ c.ttc|fcfa_number }}</td>
+                            <td class="num">{{ c.tva|fcfa_number }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="muted">Aucune dépense sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2>Principaux fournisseurs</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead><tr><th>Fournisseur</th><th class="num">TTC</th></tr></thead>
+                    <tbody>
+                    {% for s in bySupplier %}
+                        <tr>
+                            <td><a href="{{ path('app_depenses', filter.toQuery(false)|merge({q: s.fournisseur})) }}"><strong>{{ s.fournisseur }}</strong></a><small class="block muted">{{ s.n }} dépense{{ s.n > 1 ? 's' }}</small></td>
+                            <td class="num">{{ s.ttc|fcfa_number }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="2" class="muted">Aucune dépense sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+{% endblock %}

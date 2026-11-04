@@ -1,0 +1,21 @@
+{% extends 'absence/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Poser une absence' : 'Modifier l\'absence' }}{% endblock %}
+{% block absence_actions %}<a class="ghost" href="{{ isNew ? path('app_absences') : path('app_absence_show', {id: absence.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {% if isNew and not is_granted('absence.manage') %}
+            <p class="muted">Votre demande sera examinée par la direction. Vous pourrez la modifier ou l'annuler tant qu'elle n'est pas traitée.</p>
+        {% endif %}
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.personnel) }}
+            {{ form_row(form.type) }}
+            {{ form_row(form.dateDebut) }}
+            {{ form_row(form.dateFin) }}
+            {{ form_row(form.motif) }}
+            <button class="btn" type="submit">{{ isNew ? (is_granted('absence.manage') ? 'Enregistrer l\'absence' : 'Envoyer la demande') : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

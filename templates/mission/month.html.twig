@@ -1,0 +1,63 @@
+{% extends 'projet/layout.html.twig' %}
+
+{% set monthNames = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+{% set dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] %}
+
+{% block content %}
+    <section class="stats">
+        <a class="stat" href="{{ path('app_missions_list', {from: 'monday this week'|date('Y-m-d'), to: 'sunday this week'|date('Y-m-d')}) }}">
+            <span class="stat-label">Cette semaine</span>
+            <strong>{{ dashboard.thisWeek }}</strong>
+            <small>mission{{ dashboard.thisWeek > 1 ? 's' }} sur le terrain</small>
+        </a>
+        <a class="stat" href="{{ path('app_missions_list', {statut: 'ouvertes', from: 'today'|date('Y-m-d'), to: '+30 days'|date('Y-m-d')}) }}">
+            <span class="stat-label">À venir (30 jours)</span>
+            <strong>{{ dashboard.upcoming }}</strong>
+            <small>mission{{ dashboard.upcoming > 1 ? 's' }} programmée{{ dashboard.upcoming > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_missions_list', {statut: 'aclore'}) }}">
+            <span class="stat-label">À clôturer</span>
+            <strong>{{ dashboard.toClose }}</strong>
+            <small>passée{{ dashboard.toClose > 1 ? 's' }}, sans compte rendu</small>
+        </a>
+    </section>
+
+    {{ include('mission/_filters.html.twig', {action: 'app_missions', extra: {mois: month|date('Y-m')}}) }}
+
+    <div class="enc-toolbar">
+        <span class="row-actions">
+            <a class="ghost" href="{{ path('app_missions', query|merge({mois: previous})) }}">← Précédent</a>
+            <strong class="cal-month">{{ monthNames[month|date('n') + 0] }} {{ month|date('Y') }}</strong>
+            <a class="ghost" href="{{ path('app_missions', query|merge({mois: next})) }}">Suivant →</a>
+            <a class="ghost" href="{{ path('app_missions', query) }}">Ce mois-ci</a>
+        </span>
+        <span class="cal-legend">
+            {% for key, label in constant('App\\Entity\\Mission::STATUTS') %}<span><i class="cal-dot ms-{{ key }}"></i>{{ label }}</span>{% endfor %}
+        </span>
+    </div>
+
+    <div class="pgrid-wrap">
+        <div class="pgrid">
+            {% for name in dayNames %}<div class="pgrid-head">{{ name }}</div>{% endfor %}
+            {% for week in weeks %}
+                {% for day in week %}
+                    <div class="pgrid-day{{ day.inMonth ? '' : ' out' }}{{ day.weekend ? ' weekend' }}{{ day.today ? ' today' }}">
+                        <div class="pgrid-num">
+                            <span>{{ day.date|date('j') }}</span>
+                            {% if is_granted('mission.plan') %}<a href="{{ path('app_mission_new', {date: day.date|date('Y-m-d')}) }}" class="pgrid-add" aria-label="Programmer une mission le {{ day.date|date('d/m') }}" title="Programmer une mission">+</a>{% endif %}
+                        </div>
+                        {% for mission in day.items|slice(0, 3) %}
+                            <a class="pchip ms-{{ mission.statut }}{{ mission.toClose ? ' late' }}" href="{{ path('app_mission_show', {id: mission.id}) }}" title="{{ mission.lieu }} · {{ mission.statutLabel }} · {{ mission.dateDebut|date('d/m') }} au {{ mission.dateFin|date('d/m') }}">
+                                <small>{{ mission.heureDebut and mission.dateDebut == day.date ? mission.heureDebut|date('H:i') ~ ' ' }}{{ mission.lieu }}</small>
+                                <span>{{ mission.titre }}</span>
+                            </a>
+                        {% endfor %}
+                        {% if day.items|length > 3 %}
+                            <a class="pgrid-more" href="{{ path('app_missions_list', query|merge({from: day.date|date('Y-m-d'), to: day.date|date('Y-m-d')})) }}">+ {{ day.items|length - 3 }} autre{{ day.items|length - 3 > 1 ? 's' }}</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends 'projet/layout.html.twig' %}
+{% import 'projet/_macros.html.twig' as m %}
+
+{% block page_title %}{{ projet.nom }}{% endblock %}
+
+{% block pm_actions %}
+    <a class="ghost" href="{{ path('app_projets') }}">← Tous les projets</a>
+    {% if is_granted('mission.plan') and projet.statut != 'annule' %}<a class="ghost" href="{{ path('app_mission_new', {projet: projet.id}) }}">Programmer une mission</a>{% endif %}
+    {% if is_granted('projet.edit') %}<a class="btn" href="{{ path('app_projet_edit', {id: projet.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set editable = is_granted('projet.edit') %}
+
+    <section class="panel kb-info">
+        <dl class="facts kb-facts">
+            <div><dt>Statut</dt><dd>{{ m.projet_state(projet) }}</dd></div>
+            <div><dt>Client</dt><dd>{{ projet.client ? projet.client.name : 'Projet interne' }}</dd></div>
+            <div><dt>Responsable</dt><dd>{{ projet.responsable ? projet.responsable.fullName : '—' }}</dd></div>
+            <div><dt>Période</dt><dd>{{ projet.dateDebut ? projet.dateDebut|date('d/m/Y') : '…' }} → {{ projet.echeance ? projet.echeance|date('d/m/Y') : '…' }}</dd></div>
+            <div><dt>Avancement</dt><dd><span data-kanban-progress-label>{{ projet.progress }} %</span></dd></div>
+        </dl>
+        <div class="bar"><div class="bar-fill" data-kanban-progress style="width: {{ projet.progress }}%"></div></div>
+        {% if projet.description %}<p class="kv-text kb-desc-full">{{ projet.description }}</p>{% endif %}
+    </section>
+
+    <div class="kb" data-controller="kanban" data-kanban-token-value="{{ csrf_token('kanban') }}">
+        {% for key, cards in columns %}
+            <section class="kb-col">
+                <header class="kb-head">
+                    <h3>{{ constant('App\\Entity\\Tache::STATUTS')[key] }}</h3>
+                    <span class="kb-count">{{ cards|length }}</span>
+                </header>
+                <div class="kb-cards" data-kanban-target="column" data-status="{{ key }}"{% if editable %} data-action="dragover->kanban#over dragleave->kanban#leave drop->kanban#drop"{% endif %}>
+                    {% for t in cards %}{{ m.tache_card(t, editable) }}{% endfor %}
+                </div>
+                {% if editable %}<a class="kb-add" href="{{ path('app_tache_new', {id: projet.id, statut: key}) }}">+ Ajouter une carte</a>{% endif %}
+            </section>
+        {% endfor %}
+    </div>
+    {% if editable %}<p class="muted small">Faites glisser une carte pour la changer de colonne ou de rang. Cliquez sur son titre pour la modifier.</p>{% endif %}
+
+    <h2>Missions sur le terrain</h2>
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead><tr><th>Mission</th><th>Lieu</th><th>Du</th><th>Au</th><th>Statut</th></tr></thead>
+            <tbody>
+            {% for mission in missions %}
+                <tr>
+                    <td><a href="{{ path('app_mission_show', {id: mission.id}) }}"><strong>{{ mission.titre }}</strong></a></td>
+                    <td>{{ mission.lieu }}</td>
+                    <td class="nowrap">{{ mission.dateDebut|date('d/m/Y') }}</td>
+                    <td class="nowrap">{{ mission.dateFin|date('d/m/Y') }}</td>
+                    <td>{{ m.mission_state(mission) }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">Aucune mission programmée pour ce projet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_granted('projet.delete') %}
+        <form method="post" action="{{ path('app_projet_delete', {id: projet.id}) }}" class="danger-zone" onsubmit="return confirm('Supprimer ce projet et son tableau ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('projet_' ~ projet.id) }}">
+            <button class="ghost danger" type="submit">Supprimer ce projet</button>
+        </form>
+    {% endif %}
+{% endblock %}

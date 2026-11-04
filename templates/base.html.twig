@@ -11,28 +11,134 @@
         {% endblock %}
     </head>
     <body class="{% block body_class %}{% endblock %}">
-        {% block header %}
-        <header class="site-header">
-            <a href="{{ path('app_home') }}" class="brand">
-                {% if site.logoPath %}<img class="brand-logo" src="{{ asset('uploads/' ~ site.logoPath) }}" alt="">{% endif %}
-                <span class="brand-text">
-                    <strong>{{ site.headerTitle }}</strong>
-                    {% if site.headerSubtitle %}<small>{{ site.headerSubtitle }}</small>{% endif %}
-                </span>
-            </a>
-            {% if app.user %}
-                <nav class="header-nav">
-                    {% if is_granted('admin.access') %}
-                        <a href="{{ path('app_admin') }}">Administration</a>
+        {# Coque de l'application : barre du haut, menu latéral et panneau principal. Les pages sans menu (connexion) redéfinissent « layout ». #}
+        {% block layout %}
+            {% import '_icons.html.twig' as i %}
+            {% set route = app.request.attributes.get('_route') %}
+            {% set tools = nav_tools() %}
+
+            {# Outil en cours (en-tête du menu) et actions de création accessibles à l'utilisateur. #}
+            {% set context = {title: site.headerTitle, icon: 'home'} %}
+            {% for tool in tools %}{% for prefix in tool.match %}{% if route starts with prefix %}{% set context = {title: tool.title, icon: tool.icon} %}{% endif %}{% endfor %}{% endfor %}
+            {% if route starts with 'app_admin' %}{% set context = {title: 'Administration', icon: 'chart'} %}{% endif %}
+
+            {% set create = [] %}
+            {% if is_granted('correcteur.use') %}{% set create = create|merge([{label: 'Relire un texte', route: 'app_correcteur', icon: 'pen'}]) %}{% endif %}
+            {% if is_granted('encaissement.edit') %}{% set create = create|merge([{label: 'Nouvel encaissement', route: 'app_encaissement_new', icon: 'cash'}, {label: 'Nouveau client', route: 'app_client_new', icon: 'user'}]) %}{% endif %}
+            {% if is_granted('facture.edit') %}{% set create = create|merge([{label: 'Nouvelle facture', route: 'app_facture_new', icon: 'invoice', query: {type: 'facture'}}, {label: 'Nouveau devis', route: 'app_facture_new', icon: 'invoice', query: {type: 'devis'}}]) %}{% endif %}
+            {% if is_granted('projet.edit') %}{% set create = create|merge([{label: 'Nouveau projet', route: 'app_projet_new', icon: 'kanban'}]) %}{% endif %}
+            {% if is_granted('mission.plan') %}{% set create = create|merge([{label: 'Programmer une mission', route: 'app_mission_new', icon: 'pin'}]) %}{% endif %}
+            {% if is_granted('calendrier.edit') %}{% set create = create|merge([{label: 'Planifier une publication', route: 'app_publication_new', icon: 'megaphone'}]) %}{% endif %}
+            {% if is_granted('depense.edit') %}{% set create = create|merge([{label: 'Nouvelle dépense', route: 'app_depense_new', icon: 'wallet'}]) %}{% endif %}
+            {% if is_granted('ticket.create') %}{% set create = create|merge([{label: 'Signaler une panne', route: 'app_ticket_new', icon: 'wrench', query: {type: 'panne'}}, {label: 'Demander du matériel', route: 'app_ticket_new', icon: 'wrench', query: {type: 'demande'}}]) %}{% endif %}
+            {% if is_granted('absence.create') %}{% set create = create|merge([{label: 'Poser une absence', route: 'app_absence_new', icon: 'calendar'}]) %}{% endif %}
+            {% if is_granted('personnel.edit') %}{% set create = create|merge([{label: 'Nouvelle fiche du personnel', route: 'app_personnel_new', icon: 'users'}]) %}{% endif %}
+            {% if is_granted('materiel.edit') %}{% set create = create|merge([{label: 'Nouveau matériel', route: 'app_materiel_new', icon: 'laptop'}]) %}{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}{% set create = create|merge([{label: 'Nouvel utilisateur', route: 'app_admin_user_new', icon: 'key'}]) %}{% endif %}
+
+            <div class="shell" data-controller="shell" data-action="click@window->shell#outside keydown.esc@window->shell#escape">
+                <header class="topbar">
+                    <button type="button" class="icon-btn nav-toggle" data-action="shell#toggleNav" aria-label="Ouvrir le menu">{{ i.icon('menu', 22) }}</button>
+                    <a href="{{ path('app_home') }}" class="brand">
+                        {% if site.logoPath %}
+                            <img class="brand-logo" src="{{ asset('uploads/' ~ site.logoPath) }}" alt="">
+                        {% else %}
+                            <span class="brand-mark">{{ site.headerTitle|slice(0, 1)|upper }}</span>
+                        {% endif %}
+                        <span class="brand-text">{{ site.headerTitle }}</span>
+                    </a>
+
+                    {% if app.user %}
+                        <div class="usermenu">
+                            <button type="button" class="avatar-btn" data-shell-target="menuButton" data-action="shell#toggleMenu" aria-haspopup="true" aria-expanded="false" aria-label="Mon compte">{{ app.user.fullName|slice(0, 1)|upper }}</button>
+                            <div class="menu" data-shell-target="menuPanel" hidden>
+                                <div class="menu-head">
+                                    <span class="avatar-circle lg">{{ app.user.fullName|slice(0, 1)|upper }}</span>
+                                    <div>
+                                        <strong>{{ app.user.fullName }}</strong>
+                                        <small>{{ app.user.email }}</small>
+                                        <span class="role">{{ app.user.roleLabel }}</span>
+                                    </div>
+                                </div>
+                                <a class="menu-item" href="{{ path('app_home') }}">{{ i.icon('home', 18) }}<span>Accueil</span></a>
+                                {% if is_granted('admin.access') %}
+                                    <a class="menu-item" href="{{ path('app_admin') }}">{{ i.icon('dashboard', 18) }}<span>Administration</span></a>
+                                {% endif %}
+                                <a class="menu-item" href="{{ path('app_logout') }}">{{ i.icon('power', 18) }}<span>Déconnexion</span></a>
+                            </div>
+                        </div>
                     {% endif %}
-                    <span class="header-user">{{ app.user.fullName }} <small>{{ app.user.roleLabel }}</small></span>
-                    <a href="{{ path('app_logout') }}">Déconnexion</a>
-                </nav>
-            {% endif %}
-        </header>
+                </header>
+
+                <div class="shell-body">
+                    <aside class="side" data-shell-target="side">
+                        <div class="side-head">
+                            <span class="side-ctx-icon">{{ i.icon(context.icon, 18) }}</span>
+                            <strong>{{ context.title }}</strong>
+                        </div>
+
+                        {% if create %}
+                            <div class="create">
+                                <button type="button" class="pill-btn" data-shell-target="createButton" data-action="shell#toggleCreate" aria-haspopup="true" aria-expanded="false">{{ i.icon('plus', 16) }} Créer</button>
+                                <div class="menu menu-left" data-shell-target="createPanel" hidden>
+                                    {% for c in create %}
+                                        <a class="menu-item" href="{{ path(c.route, c.query|default({})) }}">{{ i.icon(c.icon, 18) }}<span>{{ c.label }}</span></a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <nav class="nav" aria-label="Navigation principale">
+                            <a class="nav-item {{ route == 'app_home' ? 'active' }}" href="{{ path('app_home') }}">{{ i.icon('home', 20) }}<span>Accueil</span></a>
+
+                            {# Catégories du menu : Administration, puis RH et finance, Matériel, Stratégie. Une catégorie n'apparaît que si le rôle donne accès à l'un de ses outils. #}
+                            {% if is_granted('admin.access') %}
+                                <div class="nav-group adm-nav">
+                                <span class="nav-label">Administration</span>
+                                <a class="nav-item {{ route == 'app_admin' ? 'active' }}" href="{{ path('app_admin') }}">{{ i.icon('chart', 20) }}<span>Tableau de bord</span></a>
+                                {% if is_granted('users.view') %}<a class="nav-item {{ route starts with 'app_admin_user' ? 'active' }}" href="{{ path('app_admin_users') }}">{{ i.icon('user', 20) }}<span>Utilisateurs</span></a>{% endif %}
+                                {% if is_granted('ROLE_ADMIN') %}<a class="nav-item {{ route starts with 'app_admin_role' ? 'active' }}" href="{{ path('app_admin_roles') }}">{{ i.icon('key', 20) }}<span>Rôles</span></a>{% endif %}
+                                {% if is_granted('activity.view') %}<a class="nav-item {{ route == 'app_admin_activity' ? 'active' }}" href="{{ path('app_admin_activity') }}">{{ i.icon('list', 20) }}<span>Journal d'activité</span></a>{% endif %}
+                                {% if is_granted('ROLE_ADMIN') %}
+                                    <a class="nav-item {{ route == 'app_admin_settings' ? 'active' }}" href="{{ path('app_admin_settings') }}">{{ i.icon('sliders', 20) }}<span>Réglages du site</span></a>
+                                    <a class="nav-item {{ route == 'app_admin_fiscal' ? 'active' }}" href="{{ path('app_admin_fiscal') }}">{{ i.icon('percent', 20) }}<span>Paramètres fiscaux</span></a>
+                                {% endif %}
+                                </div>
+                            {% endif %}
+
+                            {% for group in nav_groups() %}
+                                <div class="nav-group nav-cat-{{ group.key }}">
+                                    <span class="nav-label">{{ group.label }}</span>
+                                    {% for tool in group.tools %}
+                                        {% set on = false %}
+                                        {% for prefix in tool.match %}{% if route starts with prefix %}{% set on = true %}{% endif %}{% endfor %}
+                                        <a class="nav-item {{ on ? 'active' }}" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
+                                            {{ i.icon(tool.icon, 20) }}<span>{{ tool.title }}</span>
+                                            {% if tool.external|default(false) %}<span class="nav-ext">{{ i.icon('external', 14) }}</span>{% endif %}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </nav>
+                    </aside>
+                    <div class="scrim" data-action="click->shell#closeNav"></div>
+
+                    <main class="main{% block main_class %}{% endblock %}">
+                        <div class="main-inner">
+                            {% block body %}{% endblock %}
+                        </div>
+                        {% block footer %}
+                            {% import '_icons.html.twig' as i %}
+                            <footer class="main-foot">
+                                <span>© {{ 'now'|date('Y') }} {{ site.headerTitle }}</span>
+                                <a href="{{ path('app_home') }}">Accueil</a>
+                                {% if is_granted('admin.access') %}<a href="{{ path('app_admin') }}">Administration</a>{% endif %}
+                                <a class="btn-outline" href="{{ path('app_logout') }}">{{ i.icon('power', 16) }} Déconnexion</a>
+                            </footer>
+                        {% endblock %}
+                    </main>
+                </div>
+            </div>
         {% endblock %}
-        <main class="container{% block main_class %}{% endblock %}">
-            {% block body %}{% endblock %}
-        </main>
     </body>
 </html>

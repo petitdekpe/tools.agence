@@ -78,6 +78,10 @@ class LoginAuthenticator extends AbstractLoginFormAuthenticator
         }
 
         // Première connexion : le mot de passe initial suffit, l'authentificateur est inscrit ensuite.
+        if ($passwordOk && $user->isPasswordExpired()) {
+            throw new CustomUserMessageAuthenticationException('Ce mot de passe temporaire a expiré. Demandez-en un nouveau à un administrateur.');
+        }
+
         return $passwordOk && $this->assertActive($user);
     }
 

@@ -19,7 +19,7 @@ class ApiExceptionListener
         }
 
         $message = match ($e->getStatusCode()) {
-            404 => 'Correction introuvable.',
+            404 => 'Élément introuvable.',
             default => $e->getMessage() ?: 'Erreur inattendue.',
         };
         $event->setResponse(new JsonResponse(['error' => $message], $e->getStatusCode()));

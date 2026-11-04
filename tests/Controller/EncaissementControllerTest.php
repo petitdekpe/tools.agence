@@ -22,7 +22,7 @@ class EncaissementControllerTest extends WebTestCase
     {
         $this->browser = static::createClient();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        foreach (['encaissement', 'role_permission', 'activity_log', 'client', 'fiscal_setting', 'app_user', 'app_role'] as $table) {
+        foreach (['encaissement', 'document', 'role_permission', 'activity_log', 'client', 'fiscal_setting', 'app_user', 'app_role'] as $table) {
             $this->em->getConnection()->executeStatement('DELETE FROM '.$table);
         }
         static::getContainer()->get(RoleManager::class)->ensureSystemRoles();

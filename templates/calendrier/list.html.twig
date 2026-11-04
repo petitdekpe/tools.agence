@@ -1,0 +1,58 @@
+{% extends 'calendrier/layout.html.twig' %}
+{% import 'calendrier/_macros.html.twig' as m %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_publications', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    {{ include('calendrier/_stats.html.twig') }}
+    {{ include('calendrier/_filters.html.twig', {action: 'app_publications', extra: {sort: filter.sort, dir: filter.dir}}) }}
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} publication{{ total > 1 ? 's' }}{% if filter.isActive %} (filtrée{{ total > 1 ? 's' }}){% endif %}{% if filter.from or filter.to %} · du {{ filter.from ? filter.from|date('d/m/Y') : '…' }} au {{ filter.to ? filter.to|date('d/m/Y') : '…' }}{% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('date', 'Date', filter) }}
+                    {{ _self.sort('titre', 'Titre', filter) }}
+                    <th>Client</th>
+                    {{ _self.sort('canal', 'Canal', filter) }}
+                    <th>Responsable</th>
+                    {{ _self.sort('statut', 'Statut', filter) }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for p in rows %}
+                <tr class="{{ p.statut == 'annule' ? 'inactive' }}">
+                    <td class="nowrap">{{ p.datePublication|date('d/m/Y') }}{% if p.heure %} <small class="muted">{{ p.heure|date('H:i') }}</small>{% endif %}</td>
+                    <td class="obs"><a href="{{ path('app_publication_show', {id: p.id}) }}"><strong>{{ p.titre }}</strong></a></td>
+                    <td>{{ p.client ? p.client.name : 'PROCOM' }}</td>
+                    <td>{{ p.canalLabel }}<small class="block muted">{{ p.formatLabel }}</small></td>
+                    <td>{{ p.responsable ? p.responsable.fullName : '—' }}</td>
+                    <td>{{ m.state(p) }}</td>
+                    <td class="right"><a class="ghost" href="{{ path('app_publication_show', {id: p.id}) }}">Ouvrir</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="muted">Aucune publication{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_publications', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_publications', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

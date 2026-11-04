@@ -1,0 +1,25 @@
+{% extends 'depense/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouvelle dépense' : 'Modifier la dépense' }}{% endblock %}
+{% block dep_actions %}<a class="ghost" href="{{ path('app_depenses') }}">← Retour à la liste</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.dateDepense) }}
+            {{ form_row(form.fournisseur) }}
+            <datalist id="fournisseurs">{% for s in suppliers %}<option value="{{ s }}"></option>{% endfor %}</datalist>
+            {{ form_row(form.categorie) }}
+            {{ form_row(form.libelle) }}
+            {{ form_row(form.numeroPiece) }}
+            {{ form_row(form.montantTtc) }}
+            {{ form_row(form.tvaApplicable) }}
+            {{ form_row(form.echeance) }}
+            {{ form_row(form.datePaiement) }}
+            {{ form_row(form.mode) }}
+            {{ form_row(form.observation) }}
+            <button class="btn" type="submit">{{ isNew ? 'Enregistrer la dépense' : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

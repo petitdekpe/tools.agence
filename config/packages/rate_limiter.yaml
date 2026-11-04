@@ -1,0 +1,18 @@
+framework:
+    rate_limiter:
+        # Demandes de lien de récupération (authentificateur indisponible), par adresse IP.
+        account_recovery:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+
+when@test:
+    framework:
+        cache:
+            pools:
+                # En mémoire : le compteur ne doit pas survivre d'une exécution de tests à l'autre.
+                cache.account_recovery_test:
+                    adapter: cache.adapter.array
+        rate_limiter:
+            account_recovery:
+                cache_pool: cache.account_recovery_test

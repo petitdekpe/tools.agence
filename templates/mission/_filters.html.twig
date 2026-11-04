@@ -1,0 +1,25 @@
+{# Filtres communs au calendrier et à la liste des missions. « action » : route de la page, « extra » : champs cachés propres à la page. #}
+<form method="get" action="{{ path(action) }}" class="filters enc-filters">
+    {% for name, value in extra|default({}) %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    <input type="search" name="q" value="{{ filter.q }}" placeholder="Titre, lieu, projet ou client…" aria-label="Rechercher">
+    <select name="projet" aria-label="Projet">
+        <option value="">Tous les projets</option>
+        {% for p in projects %}<option value="{{ p.id }}" {{ filter.projet == p.id ? 'selected' }}>{{ p.nom }}</option>{% endfor %}
+    </select>
+    <select name="client" aria-label="Client">
+        <option value="">Tous les clients</option>
+        {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <select name="personnel" aria-label="Personne mobilisée">
+        <option value="">Toute l'équipe</option>
+        {% for p in people %}<option value="{{ p.id }}" {{ filter.personnel == p.id ? 'selected' }}>{{ p.fullName }}</option>{% endfor %}
+    </select>
+    <select name="statut" aria-label="Statut">
+        <option value="">Tous les statuts</option>
+        <option value="ouvertes" {{ filter.statut == 'ouvertes' ? 'selected' }}>À venir ou à clôturer</option>
+        <option value="aclore" {{ filter.statut == 'aclore' ? 'selected' }}>À clôturer (passées)</option>
+        {% for key, label in constant('App\\Entity\\Mission::STATUTS') %}<option value="{{ key }}" {{ filter.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if filter.isActive %}<a class="ghost" href="{{ path(action, extra|default({})) }}">Réinitialiser</a>{% endif %}
+</form>

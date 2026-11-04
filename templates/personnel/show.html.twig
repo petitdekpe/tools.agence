@@ -22,7 +22,14 @@
                 <div><dt>Service</dt><dd>{{ person.department ?: '—' }}</dd></div>
                 <div><dt>E-mail</dt><dd>{{ person.email ?: '—' }}</dd></div>
                 <div><dt>Téléphone</dt><dd>{{ person.phone ?: '—' }}</dd></div>
-                <div><dt>Compte PROCOM Tools</dt><dd>{{ person.user ? person.user.fullName ~ ' (' ~ person.user.roleLabel ~ ')' : '—' }}</dd></div>
+                <div><dt>Compte PROCOM Tools</dt><dd>
+                    {% if person.user %}
+                        {{ person.user.fullName ~ ' (' ~ person.user.roleLabel ~ ')' }}
+                        {% if not person.user.hasTwoFactor %}<span class="chip chip-warn">Authentificateur à activer</span>{% endif %}
+                    {% elseif person.active and is_granted('ROLE_ADMIN') %}
+                        <a class="ghost" href="{{ path('app_admin_user_from_personnel', {id: person.id}) }}">Créer un compte</a>
+                    {% else %}—{% endif %}
+                </dd></div>
             </dl>
         </section>
         <section class="panel">

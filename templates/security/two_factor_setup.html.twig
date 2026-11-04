@@ -2,10 +2,10 @@
 
 {% block title %}Activer l'authentification · {{ site_settings().headerTitle }}{% endblock %}
 {% block body_class %}page-login{% endblock %}
-{% block header %}{% endblock %}
-
-{% block body %}
+{% block layout %}
+<div class="login-wrap">
     <div class="login-card wide">
+        {% include 'security/_brand.html.twig' %}
         <h1>Activez Google Authenticator</h1>
         <p class="muted">L'authentification à double facteur est obligatoire. Cette étape est à faire une seule fois.</p>
 
@@ -27,4 +27,5 @@
         </form>
         <p class="center"><a class="muted" href="{{ path('app_logout') }}">Se déconnecter</a></p>
     </div>
+</div>
 {% endblock %}

@@ -104,6 +104,11 @@ class Encaissement
     #[Assert\Length(max: 2000, maxMessage: '2 000 caractères maximum.')]
     private ?string $observation = null;
 
+    /** La facture réglée (en tout ou partie) par cet encaissement, si on la connaît. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Document $facture = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -125,6 +130,19 @@ class Encaissement
     public function __construct()
     {
         $this->createdAt = $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    #[Assert\Callback]
+    public function validateFacture(ExecutionContextInterface $context): void
+    {
+        if (null === $this->facture) {
+            return;
+        }
+        if (!$this->facture->isFacture()) {
+            $context->buildViolation('Seule une facture peut être réglée par un encaissement.')->atPath('facture')->addViolation();
+        } elseif ($this->client && $this->facture->getClient() !== $this->client) {
+            $context->buildViolation('Cette facture est au nom de '.$this->facture->getClient()?->getName().', pas du client choisi.')->atPath('facture')->addViolation();
+        }
     }
 
     #[Assert\Callback]
@@ -343,6 +361,18 @@ class Encaissement
         return $this;
     }
 
+    public function getFacture(): ?Document
+    {
+        return $this->facture;
+    }
+
+    public function setFacture(?Document $facture): static
+    {
+        $this->facture = $facture;
+
+        return $this;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -412,6 +442,7 @@ class Encaissement
             'date' => $this->dateEncaissement?->format('d/m/Y'),
             'client' => $this->client?->getName(),
             'nature' => $this->getNatureLabel(),
+            'facture' => $this->facture?->getReference(),
             'ttc' => $int($this->montantTtc),
             'ht' => $int($this->montantHt),
             'tva_facturee' => $int($this->tvaFacturee),

@@ -1,0 +1,133 @@
+{% extends 'projet/layout.html.twig' %}
+{% import 'projet/_macros.html.twig' as m %}
+
+{% block page_title %}Bilan de période{% endblock %}
+{% block pm_actions %}<button type="button" class="btn-outline" onclick="window.print()">Imprimer le bilan</button>{% endblock %}
+
+{% block content %}
+    <div class="no-print">
+        <div class="presets">
+            {% for key, item in presets %}<a class="chip-link{{ preset == key ? ' on' }}" href="{{ path('app_missions_review', {periode: key}) }}">{{ item[0] }}</a>{% endfor %}
+        </div>
+        <form method="get" class="filters">
+            <label class="inline">Du <input type="date" name="from" value="{{ report.from|date('Y-m-d') }}" required></label>
+            <label class="inline">au <input type="date" name="to" value="{{ report.to|date('Y-m-d') }}" required></label>
+            <button class="btn" type="submit">Afficher</button>
+        </form>
+    </div>
+
+    <p class="review-period">Point du <strong>{{ report.from|date('d/m/Y') }}</strong> au <strong>{{ report.to|date('d/m/Y') }}</strong>. Les missions comptent dans la période où elles commencent.</p>
+
+    <section class="stats">
+        <div class="stat">
+            <span class="stat-label">Missions prévues</span>
+            <strong>{{ report.total }}</strong>
+            <small>{{ report.cancelled }} annulée{{ report.cancelled > 1 ? 's' }} · {{ report.postponed }} reportée{{ report.postponed > 1 ? 's' }}</small>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Réalisées</span>
+            <strong>{{ report.done }}</strong>
+            <small>{% if report.rate is not null %}taux de réalisation : {{ report.rate }} %{% else %}aucune mission échue{% endif %}</small>
+        </div>
+        <a class="stat no-link" href="{{ path('app_missions_list', {statut: 'aclore', from: report.from|date('Y-m-d'), to: report.to|date('Y-m-d')}) }}">
+            <span class="stat-label">À clôturer</span>
+            <strong>{{ report.toClose }}</strong>
+            <small>passées, sans compte rendu</small>
+        </a>
+        <div class="stat">
+            <span class="stat-label">Jours de terrain</span>
+            <strong>{{ report.fieldDays }}</strong>
+            <small>jours × personnes, missions réalisées</small>
+        </div>
+    </section>
+
+    {% if report.done > 0 %}
+        <h2>Résultats des missions réalisées</h2>
+        <div class="results">
+            {% for key, label in resultats %}<span class="chip {{ key == 'atteint' ? 'chip-ok' : (key == 'partiel' ? 'chip-warn' : 'chip-bad') }}">{{ label }} : {{ report.byResult[key] }}</span>{% endfor %}
+            {% if report.noResult %}<span class="chip chip-muted">Sans résultat renseigné : {{ report.noResult }}</span>{% endif %}
+        </div>
+    {% endif %}
+
+    <div class="enc-summary">
+        <section>
+            <h2>Par personne</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead><tr><th>Personne</th><th class="num">Missions</th><th class="num">Réalisées</th><th class="num">Jours</th><th class="num">Chef</th></tr></thead>
+                    <tbody>
+                    {% for row in report.byPerson %}
+                        <tr>
+                            <td><strong>{{ row.person.fullName }}</strong></td>
+                            <td class="num">{{ row.missions }}</td>
+                            <td class="num">{{ row.done }}</td>
+                            <td class="num">{{ row.days }}</td>
+                            <td class="num">{{ row.lead }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="muted">Aucune équipe mobilisée sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2>Par projet</h2>
+            <div class="table-card">
+                <table class="table enc-table">
+                    <thead><tr><th>Projet</th><th class="num">Missions</th><th class="num">Réalisées</th></tr></thead>
+                    <tbody>
+                    {% for row in report.byProject %}
+                        <tr>
+                            <td>{% if row.projet %}<a href="{{ path('app_projet_show', {id: row.projet.id}) }}"><strong>{{ row.label }}</strong></a>{% else %}<span class="muted">{{ row.label }}</span>{% endif %}</td>
+                            <td class="num">{{ row.missions }}</td>
+                            <td class="num">{{ row.done }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="muted">Aucune mission sur la période.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <h2>Détail des missions</h2>
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead><tr><th>Dates</th><th>Mission</th><th>Lieu</th><th>Équipe</th><th>Statut</th><th>Résultat et retour de terrain</th></tr></thead>
+            <tbody>
+            {% for mission in report.missions %}
+                <tr>
+                    <td class="nowrap">{{ mission.dateDebut|date('d/m/Y') }}{% if mission.dateFin != mission.dateDebut %}<small class="block muted">au {{ mission.dateFin|date('d/m/Y') }}</small>{% endif %}</td>
+                    <td><a href="{{ path('app_mission_show', {id: mission.id}) }}"><strong>{{ mission.titre }}</strong></a>{% if mission.projet %}<small class="block muted">{{ mission.projet.nom }}</small>{% endif %}</td>
+                    <td>{{ mission.lieu }}</td>
+                    <td>{{ mission.participants|length ? mission.participants|map(p => p.fullName)|join(', ') : '—' }}</td>
+                    <td>{{ m.mission_state(mission) }}</td>
+                    <td class="obs">{% if mission.resultatLabel %}<strong>{{ mission.resultatLabel }}</strong><br>{% endif %}{{ mission.compteRendu ? (mission.compteRendu|length > 240 ? mission.compteRendu|slice(0, 240) ~ '…' : mission.compteRendu) : '' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="muted">Aucune mission ne commence sur cette période.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Projets et tâches</h2>
+    <div class="detail">
+        <section class="panel">
+            <h2>Terminé sur la période</h2>
+            <p><strong>{{ report.tasksClosed|length }}</strong> tâche{{ report.tasksClosed|length > 1 ? 's' }} terminée{{ report.tasksClosed|length > 1 ? 's' }}, <strong>{{ report.projectsClosed|length }}</strong> projet{{ report.projectsClosed|length > 1 ? 's' }} terminé{{ report.projectsClosed|length > 1 ? 's' }}.</p>
+            {% for p in report.projectsClosed %}<div class="line"><div><strong><a href="{{ path('app_projet_show', {id: p.id}) }}">{{ p.nom }}</a></strong><small>{{ p.client ? p.client.name : 'Projet interne' }}</small></div><span class="chip chip-ok">Terminé le {{ p.closedAt|date('d/m') }}</span></div>{% endfor %}
+            {% for t in report.tasksClosed|slice(0, 12) %}<div class="line"><div><strong>{{ t.titre }}</strong><small>{{ t.projet.nom }}{{ t.assignee ? ' · ' ~ t.assignee.fullName }}</small></div><span class="muted">{{ t.closedAt|date('d/m') }}</span></div>{% endfor %}
+            {% if report.tasksClosed|length > 12 %}<p class="muted small">et {{ report.tasksClosed|length - 12 }} autre{{ report.tasksClosed|length - 12 > 1 ? 's' }}.</p>{% endif %}
+        </section>
+        <section class="panel">
+            <h2>Tâches en retard aujourd'hui</h2>
+            <p><strong>{{ report.tasksOverdue|length }}</strong> tâche{{ report.tasksOverdue|length > 1 ? 's' }} ouverte{{ report.tasksOverdue|length > 1 ? 's' }} dont l'échéance est dépassée.</p>
+            {% for t in report.tasksOverdue|slice(0, 12) %}<div class="line"><div><strong>{{ t.titre }}</strong><small>{{ t.projet.nom }}{{ t.assignee ? ' · ' ~ t.assignee.fullName }}</small></div><span class="chip chip-bad">{{ t.echeance|date('d/m/Y') }}</span></div>{% endfor %}
+            {% if report.tasksOverdue|length > 12 %}<p class="muted small">et {{ report.tasksOverdue|length - 12 }} autre{{ report.tasksOverdue|length - 12 > 1 ? 's' }}.</p>{% endif %}
+        </section>
+    </div>
+{% endblock %}

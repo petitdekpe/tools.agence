@@ -1,0 +1,22 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Factures et devis : onglets entre les deux types de documents et bouton de création du type affiché. #}
+
+{% block page_title %}Factures et devis{% endblock %}
+
+{% block page_actions %}
+    {% set currentType = filter is defined ? filter.type : (document is defined ? document.type : 'facture') %}
+    {% block doc_actions %}
+        {% if is_granted('facture.edit') %}
+            <a class="btn" href="{{ path('app_facture_new', {type: currentType}) }}">+ {{ currentType == 'devis' ? 'Nouveau devis' : 'Nouvelle facture' }}</a>
+        {% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set currentType = filter is defined ? filter.type : (document is defined ? document.type : 'facture') %}
+    <nav class="tabs">
+        <a href="{{ path('app_factures', {type: 'facture'}) }}" class="{{ currentType == 'facture' ? 'active' }}">Factures</a>
+        <a href="{{ path('app_factures', {type: 'devis'}) }}" class="{{ currentType == 'devis' ? 'active' }}">Devis</a>
+    </nav>
+{% endblock %}

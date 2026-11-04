@@ -13,7 +13,10 @@ use Symfony\Component\String\Slugger\AsciiSlugger;
 class RoleManager
 {
     /** Codes que Symfony ou l'application utilisent déjà : un rôle créé ne doit jamais les prendre. */
-    private const RESERVED = [User::ROLE_ADMIN, User::ROLE_AGENT, User::ROLE_DIRECTION, User::ROLE_USER, 'ROLE_ALLOWED_TO_SWITCH', 'ROLE_SUPER_ADMIN'];
+    private const RESERVED = [
+        User::ROLE_ADMIN, User::ROLE_AGENT, User::ROLE_DIRECTION, User::ROLE_ADMINISTRATION, User::ROLE_RH_FINANCE, User::ROLE_MATERIEL, User::ROLE_STRATEGIE,
+        User::ROLE_USER, 'ROLE_ALLOWED_TO_SWITCH', 'ROLE_SUPER_ADMIN',
+    ];
 
     public function __construct(private readonly EntityManagerInterface $em, private readonly RoleRepository $roles, private readonly PermissionManager $permissions)
     {

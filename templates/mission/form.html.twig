@@ -1,0 +1,34 @@
+{% extends 'projet/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Programmer une mission' : 'Modifier la mission' }}{% endblock %}
+{% block pm_actions %}<a class="ghost" href="{{ isNew ? path('app_missions') : path('app_mission_show', {id: mission.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel wide">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.titre) }}
+            {{ form_row(form.projet) }}
+            {{ form_row(form.client) }}
+            {{ form_row(form.lieu) }}
+            {{ form_row(form.dateDebut) }}
+            {{ form_row(form.dateFin) }}
+            {{ form_row(form.heureDebut) }}
+            {{ form_row(form.statut) }}
+            {{ form_row(form.responsable) }}
+            <fieldset class="perm-box team-box">
+                <legend>Équipe</legend>
+                {{ form_errors(form.equipe) }}
+                {% for choice in form.equipe %}
+                    <label class="perm-line">{{ form_widget(choice) }}<span>{{ choice.vars.label }}</span></label>
+                {% else %}
+                    <p class="muted">Aucune personne en poste.</p>
+                {% endfor %}
+            </fieldset>
+            {% do form.equipe.setRendered %}
+            {{ form_row(form.objectifs) }}
+            <p class="muted small">Les conflits (personne déjà en mission ou absente) sont signalés après l'enregistrement, sans bloquer la programmation.</p>
+            <button class="btn" type="submit">{{ isNew ? 'Programmer la mission' : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'absence/layout.html.twig' %}
+{% import 'absence/_macros.html.twig' as m %}
+
+{% block page_title %}{{ absence.personnel.fullName }}{% endblock %}
+
+{% block absence_actions %}
+    <a class="ghost" href="{{ path('app_absences') }}">← Retour à la liste</a>
+    {% if canEdit and is_granted('absence.create') %}<a class="btn" href="{{ path('app_absence_edit', {id: absence.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('absence_' ~ absence.id) %}
+
+    {% if absence.pending and is_granted('absence.manage') %}
+        <section class="panel decision">
+            <h2>Cette demande attend votre décision</h2>
+            <form method="post" action="{{ path('app_absence_decision', {id: absence.id}) }}" class="form">
+                <input type="hidden" name="_token" value="{{ token }}">
+                <label for="note">Note (obligatoire pour un refus)</label>
+                <textarea id="note" name="note" rows="3" maxlength="1000" placeholder="Ex. Période de forte activité, pouvez-vous décaler d'une semaine ?"></textarea>
+                <div class="row-actions">
+                    <button class="btn" type="submit" name="decision" value="approuver">Approuver</button>
+                    <button class="btn-outline" type="submit" name="decision" value="refuser">Refuser</button>
+                </div>
+            </form>
+        </section>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>{{ absence.typeLabel }}</h2>
+            <dl class="facts">
+                <div><dt>Statut</dt><dd>{{ m.state(absence) }}</dd></div>
+                <div><dt>Personne</dt><dd>{% if is_granted('personnel.view') %}<a href="{{ path('app_personnel_show', {id: absence.personnel.id}) }}">{{ absence.personnel.fullName }}</a>{% else %}{{ absence.personnel.fullName }}{% endif %}{% if absence.personnel.department %} <small class="muted">· {{ absence.personnel.department }}</small>{% endif %}</dd></div>
+                <div><dt>Du</dt><dd>{{ absence.dateDebut|date('d/m/Y') }}</dd></div>
+                <div><dt>Au (inclus)</dt><dd>{{ absence.dateFin|date('d/m/Y') }}</dd></div>
+                <div><dt>Jours ouvrés</dt><dd><strong>{{ absence.jours }}</strong></dd></div>
+                {% if canSeePrivate and absence.motif %}<div><dt>Motif</dt><dd class="kv-text">{{ absence.motif }}</dd></div>{% endif %}
+                {% if absence.decidedBy %}
+                    <div><dt>{{ absence.statut == 'annulee' ? 'Annulée par' : 'Décision de' }}</dt><dd>{{ absence.decidedBy.fullName }}{% if absence.decidedAt %} <small class="muted">le {{ absence.decidedAt|date('d/m/Y') }}</small>{% endif %}</dd></div>
+                {% endif %}
+                {% if canSeePrivate and absence.decision %}<div><dt>Note</dt><dd class="kv-text">{{ absence.decision }}</dd></div>{% endif %}
+                <div><dt>Demandée le</dt><dd>{{ absence.createdAt|date('d/m/Y') }}{% if absence.createdBy %} <small class="muted">par {{ absence.createdBy.fullName }}</small>{% endif %}</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2>Sur l'année {{ absence.dateDebut|date('Y') }}</h2>
+            <dl class="calc">
+                <div class="total"><dt>Jours approuvés</dt><dd>{{ daysThisYear }}</dd></div>
+            </dl>
+            <p class="muted small">Total des jours ouvrés approuvés de {{ absence.personnel.firstName }}, toutes absences confondues, dont le premier jour tombe en {{ absence.dateDebut|date('Y') }}.</p>
+        </section>
+    </div>
+
+    <div class="enc-toolbar">
+        <span class="row-actions">
+            {% if canCancel %}
+                <form method="post" action="{{ path('app_absence_cancel', {id: absence.id}) }}" onsubmit="return confirm('Annuler cette absence ?')">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <button class="btn-outline" type="submit">Annuler l'absence</button>
+                </form>
+            {% endif %}
+        </span>
+    </div>
+
+    {% if is_granted('absence.delete') %}
+        <form method="post" action="{{ path('app_absence_delete', {id: absence.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer cette absence ?')">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="ghost danger" type="submit">Supprimer cette absence</button>
+        </form>
+    {% endif %}
+{% endblock %}

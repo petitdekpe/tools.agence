@@ -59,7 +59,7 @@ class RoleTest extends AppWebTestCase
         $this->submitRole('/admin/roles/nouveau', ['label' => 'Stagiaire'], []);
         self::assertResponseStatusCodeSame(422);
 
-        self::assertSame(4, $this->em->getRepository(Role::class)->count([]), 'trois rôles système et un seul rôle créé');
+        self::assertSame(\count(Role::SYSTEM) + 1, $this->em->getRepository(Role::class)->count([]), 'les rôles système et un seul rôle créé');
     }
 
     public function testLeCodeSeDeduitDuNomSansCollision(): void
@@ -171,7 +171,7 @@ class RoleTest extends AppWebTestCase
     public function testLesRolesSystemeNeSeSupprimentPas(): void
     {
         $manager = static::getContainer()->get(RoleManager::class);
-        foreach ([User::ROLE_ADMIN, User::ROLE_AGENT, User::ROLE_DIRECTION] as $code) {
+        foreach (array_keys(Role::SYSTEM) as $code) {
             try {
                 $manager->delete($this->role($code));
                 self::fail("$code a été supprimé.");
@@ -179,7 +179,7 @@ class RoleTest extends AppWebTestCase
                 self::assertStringContainsString('fait partie de l\'application', $e->getMessage());
             }
         }
-        self::assertSame(3, $this->em->getRepository(Role::class)->count([]));
+        self::assertSame(\count(Role::SYSTEM), $this->em->getRepository(Role::class)->count([]));
 
         // Pas de bouton « Supprimer » pour eux dans la liste, et un jeton ne suffirait pas à les atteindre.
         $this->login($this->user(User::ROLE_ADMIN));
@@ -419,8 +419,8 @@ class RoleTest extends AppWebTestCase
         $manager->ensureSystemRoles();
 
         $roles = static::getContainer()->get(RoleRepository::class)->findAllOrdered();
-        self::assertSame(['Admin', 'Agent', 'Direction'], array_map(static fn (Role $r): string => $r->getLabel(), $roles));
-        self::assertSame([true, true, true], array_map(static fn (Role $r): bool => $r->isSystem(), $roles));
+        self::assertSame(['Admin', 'Administration', 'Agent', 'Direction', 'Matériel', 'RH et finance', 'Stratégie'], array_map(static fn (Role $r): string => $r->getLabel(), $roles));
+        self::assertSame(array_fill(0, \count(Role::SYSTEM), true), array_map(static fn (Role $r): bool => $r->isSystem(), $roles));
     }
 
     public function testCommandeDeCreationDUtilisateurAvecUnRoleCree(): void

@@ -1,0 +1,46 @@
+{% extends 'calendrier/layout.html.twig' %}
+
+{% set monthNames = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+{% set dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] %}
+
+{% block content %}
+    {{ include('calendrier/_stats.html.twig') }}
+    {{ include('calendrier/_filters.html.twig', {action: 'app_calendrier', extra: {mois: month|date('Y-m')}}) }}
+
+    <div class="enc-toolbar">
+        <span class="row-actions">
+            <a class="ghost" href="{{ path('app_calendrier', query|merge({mois: previous})) }}">← Précédent</a>
+            <strong class="cal-month">{{ monthNames[month|date('n') + 0] }} {{ month|date('Y') }}</strong>
+            <a class="ghost" href="{{ path('app_calendrier', query|merge({mois: next})) }}">Suivant →</a>
+            <a class="ghost" href="{{ path('app_calendrier', query) }}">Ce mois-ci</a>
+        </span>
+        <span class="cal-legend">
+            {% for key, label in constant('App\\Entity\\Publication::STATUTS') %}<span><i class="cal-dot st-{{ key }}"></i>{{ label }}</span>{% endfor %}
+        </span>
+    </div>
+
+    <div class="pgrid-wrap">
+        <div class="pgrid">
+            {% for name in dayNames %}<div class="pgrid-head">{{ name }}</div>{% endfor %}
+            {% for week in weeks %}
+                {% for day in week %}
+                    <div class="pgrid-day{{ day.inMonth ? '' : ' out' }}{{ day.weekend ? ' weekend' }}{{ day.today ? ' today' }}">
+                        <div class="pgrid-num">
+                            <span>{{ day.date|date('j') }}</span>
+                            {% if is_granted('calendrier.edit') %}<a href="{{ path('app_publication_new', {date: day.date|date('Y-m-d')}) }}" class="pgrid-add" aria-label="Planifier le {{ day.date|date('d/m') }}" title="Planifier une publication">+</a>{% endif %}
+                        </div>
+                        {% for p in day.items|slice(0, 3) %}
+                            <a class="pchip st-{{ p.statut }}{{ p.late ? ' late' }}" href="{{ path('app_publication_show', {id: p.id}) }}" title="{{ p.canalLabel }} · {{ p.statutLabel }}{{ p.client ? ' · ' ~ p.client.name }}">
+                                <small>{{ p.heure ? p.heure|date('H:i') ~ ' ' }}{{ p.canalLabel }}</small>
+                                <span>{{ p.titre }}</span>
+                            </a>
+                        {% endfor %}
+                        {% if day.items|length > 3 %}
+                            <a class="pgrid-more" href="{{ path('app_publications', query|merge({from: day.date|date('Y-m-d'), to: day.date|date('Y-m-d')})) }}">+ {{ day.items|length - 3 }} autre{{ day.items|length - 3 > 1 ? 's' }}</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

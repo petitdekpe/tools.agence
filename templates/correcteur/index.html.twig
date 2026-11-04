@@ -1,25 +1,33 @@
 {% extends 'base.html.twig' %}
+{% import '_icons.html.twig' as i %}
 
 {% block title %}Correcteur média · {{ site_settings().headerTitle }}{% endblock %}
-{% block main_class %} container-full{% endblock %}
+{% block main_class %} main-flush{% endblock %}
 {% block body_class %}page-full{% endblock %}
+{% block footer %}{% endblock %}
 
 {% block body %}
     <div class="app"
          data-controller="correcteur"
-         data-correcteur-api-value="{{ path('app_correcteur_list') }}"
+         data-correcteur-corrections-value="{{ path('app_correcteur_list') }}"
+         data-correcteur-dossiers-value="{{ path('app_correcteur_dossiers') }}"
+         data-correcteur-suggest-value="{{ path('app_correcteur_suggest') }}"
+         data-correcteur-memory-value="{{ path('app_correcteur_memory') }}"
+         data-correcteur-admin-value="{{ is_granted('ROLE_ADMIN') ? 'true' : 'false' }}"
          data-correcteur-token-value="{{ csrf_token('correcteur') }}">
 
         <aside class="app-side">
             <div class="app-side-head">
-                <span class="tool-logo">✍️</span>
+                <span class="tool-logo">{{ i.icon('pen', 18) }}</span>
                 <strong>Correcteur média</strong>
                 <span class="badge">IA</span>
             </div>
-            <button type="button" class="btn-dark" data-action="correcteur#newChat">+ Nouvelle correction</button>
-            <div class="side-label">Historique</div>
-            <ul class="history" data-correcteur-target="list"></ul>
-            <a class="side-back" href="{{ path('app_home') }}">← Tous les outils</a>
+
+            <div class="side-label">Dossiers</div>
+            <ul class="history" data-correcteur-target="dossierList"></ul>
+
+            <div class="side-label">Mémoire <span class="side-hint" data-correcteur-target="memoryScope"></span></div>
+            <ul class="memory" data-correcteur-target="memoryList"></ul>
         </aside>
 
         <section class="app-main">
@@ -30,12 +38,27 @@
             <div class="thread" data-correcteur-target="thread"></div>
 
             <form class="composer" data-action="submit->correcteur#submit">
+                <div class="composer-top">
+                    <label class="composer-dossier">
+                        <span>Dossier</span>
+                        <input type="text" maxlength="120" list="correcteur-dossiers" autocomplete="off"
+                               placeholder="Partenaire, événement, campagne…"
+                               data-correcteur-target="dossier"
+                               data-action="input->correcteur#dossierChanged change->correcteur#dossierChanged">
+                        <datalist id="correcteur-dossiers" data-correcteur-target="datalist"></datalist>
+                    </label>
+                    <button type="button" class="suggestion" hidden data-correcteur-target="suggestion" data-action="correcteur#useSuggestion"></button>
+                </div>
+                <div class="revision-banner" hidden data-correcteur-target="banner">
+                    <span data-correcteur-target="bannerText"></span>
+                    <button type="button" class="ghost small" data-action="correcteur#cancelRevision">Annuler</button>
+                </div>
                 <textarea data-correcteur-target="input" rows="3" maxlength="20000"
                           placeholder="Collez un post ou le texte d'un visuel à relire…"
-                          data-action="keydown->correcteur#keydown"></textarea>
+                          data-action="keydown->correcteur#keydown input->correcteur#textChanged"></textarea>
                 <div class="composer-foot">
                     <span class="hint" data-correcteur-target="status">Ctrl + Entrée pour envoyer</span>
-                    <button type="submit" class="send" data-correcteur-target="send" aria-label="Relire">➤</button>
+                    <button type="submit" class="send" data-correcteur-target="send" aria-label="Relire">{{ i.icon('send', 18) }}</button>
                 </div>
             </form>
         </section>

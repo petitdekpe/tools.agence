@@ -1,0 +1,19 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Congés et absences : onglets entre la liste des demandes et le calendrier d'équipe. #}
+
+{% block page_title %}Congés et absences{% endblock %}
+
+{% block page_actions %}
+    {% block absence_actions %}
+        {% if is_granted('absence.create') %}<a class="btn" href="{{ path('app_absence_new') }}">+ Poser une absence</a>{% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set route = app.request.attributes.get('_route') %}
+    <nav class="tabs">
+        <a href="{{ path('app_absences') }}" class="{{ route != 'app_absence_calendar' ? 'active' }}">Demandes</a>
+        <a href="{{ path('app_absence_calendar') }}" class="{{ route == 'app_absence_calendar' ? 'active' }}">Calendrier d'équipe</a>
+    </nav>
+{% endblock %}

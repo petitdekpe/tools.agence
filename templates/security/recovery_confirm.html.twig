@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réinitialiser l'authentificateur · {{ site_settings().headerTitle }}{% endblock %}
+{% block body_class %}page-login{% endblock %}
+{% block layout %}
+<div class="login-wrap">
+    <div class="login-card">
+        {% include 'security/_brand.html.twig' %}
+        {% if user %}
+            <h1>Réinitialiser Google Authenticator</h1>
+            <p class="muted">Compte : <strong>{{ user.email }}</strong>. Votre authentificateur actuel sera supprimé et un mot de passe temporaire vous sera envoyé pour en inscrire un nouveau.</p>
+            <form method="post" class="form">
+                {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+                <input type="hidden" name="_token" value="{{ csrf_token('recovery_confirm') }}">
+                <button class="btn" type="submit">Réinitialiser et recevoir un mot de passe</button>
+            </form>
+        {% else %}
+            <h1>Lien invalide</h1>
+            <div class="alert error">Ce lien a expiré ou a déjà servi. Vous pouvez en demander un nouveau.</div>
+            <p class="center"><a class="btn" href="{{ path('app_recovery_request') }}">Demander un nouveau lien</a></p>
+        {% endif %}
+        <p class="center"><a class="muted" href="{{ path('app_login') }}">← Retour à la connexion</a></p>
+    </div>
+</div>
+{% endblock %}

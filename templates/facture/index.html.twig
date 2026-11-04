@@ -1,0 +1,123 @@
+{% extends 'facture/layout.html.twig' %}
+{% import 'facture/_macros.html.twig' as m %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_factures', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    {% set isFacture = filter.type == 'facture' %}
+
+    <section class="stats">
+        <a class="stat" href="{{ path('app_factures', {type: 'facture', etat: 'impayee'}) }}">
+            <span class="stat-label">Reste à encaisser</span>
+            <strong>{{ dashboard.receivable|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.openInvoices }} facture{{ dashboard.openInvoices > 1 ? 's' }} ouverte{{ dashboard.openInvoices > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_factures', {type: 'facture', etat: 'retard'}) }}">
+            <span class="stat-label">En retard</span>
+            <strong>{{ dashboard.overdue|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.overdueCount }} facture{{ dashboard.overdueCount > 1 ? 's' }} échue{{ dashboard.overdueCount > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_factures', {type: 'devis', etat: 'envoye'}) }}">
+            <span class="stat-label">Devis en attente</span>
+            <strong>{{ dashboard.quotesPendingAmount|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.quotesPending }} devis envoyé{{ dashboard.quotesPending > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_factures', {type: 'devis', etat: 'afacturer'}) }}">
+            <span class="stat-label">Devis à facturer</span>
+            <strong>{{ dashboard.quotesToInvoice }}</strong>
+            <small>accepté{{ dashboard.quotesToInvoice > 1 ? 's' }}, sans facture</small>
+        </a>
+    </section>
+
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="type" value="{{ filter.type }}">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Numéro, objet ou client…" aria-label="Rechercher">
+        <select name="client" aria-label="Client">
+            <option value="">Tous les clients</option>
+            {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+        </select>
+        <select name="etat" aria-label="État">
+            <option value="">Tous les états</option>
+            {% for key, label in etats %}<option value="{{ key }}" {{ filter.etat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
+        <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_factures', {type: filter.type}) }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} {{ isFacture ? 'facture' : 'devis' }}{{ isFacture and total > 1 ? 's' }}{% if filter.isActive %} (filtré{{ total > 1 ? 's' }}){% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('reference', 'Numéro', filter) }}
+                    {{ _self.sort('client', 'Client', filter) }}
+                    <th>Objet</th>
+                    {{ _self.sort('date', 'Émission', filter) }}
+                    {{ _self.sort('echeance', isFacture ? 'Échéance' : 'Validité', filter) }}
+                    {{ _self.sort('ttc', 'TTC', filter, 'num') }}
+                    {% if isFacture %}<th class="num">Encaissé</th><th class="num">Reste</th>{% endif %}
+                    <th>État</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                {% set d = row[0] %}
+                {% set paid = row.paid %}
+                <tr class="{{ d.statut == 'annulee' ? 'inactive' }}">
+                    <td class="nowrap"><a href="{{ path('app_facture_show', {id: d.id}) }}"><strong>{{ d.reference }}</strong></a></td>
+                    <td>{{ d.client.name }}</td>
+                    <td class="obs">{{ d.objet }}</td>
+                    <td class="nowrap">{{ d.dateEmission|date('d/m/Y') }}</td>
+                    <td class="nowrap">{{ d.dateLimite ? d.dateLimite|date('d/m/Y') : '—' }}</td>
+                    <td class="num"><strong>{{ d.montantTtc|fcfa_number }}</strong></td>
+                    {% if isFacture %}
+                        <td class="num">{{ paid|fcfa_number }}</td>
+                        <td class="num">{{ d.statut == 'emise' ? d.balance(paid)|fcfa_number : '—' }}</td>
+                    {% endif %}
+                    <td>{{ m.state(d, paid) }}</td>
+                    <td class="right">
+                        <div class="row-actions">
+                            <a class="ghost" href="{{ path('app_facture_show', {id: d.id}) }}">Fiche</a>
+                            {% if is_granted('facture.edit') %}<a class="ghost" href="{{ path('app_facture_edit', {id: d.id}) }}">Modifier</a>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="{{ isFacture ? 10 : 8 }}" class="muted">Aucun{{ isFacture ? 'e facture' : ' devis' }}{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if totals.n > 0 %}
+                <tfoot>
+                    <tr>
+                        <td colspan="5">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }}</td>
+                        <td class="num">{{ totals.ttc|fcfa_number }}</td>
+                        <td colspan="{{ isFacture ? 4 : 2 }}"></td>
+                    </tr>
+                </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    <p class="muted small">Montants en FCFA. Les totaux couvrent toutes les lignes correspondant aux filtres, pas seulement la page affichée.</p>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_factures', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_factures', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

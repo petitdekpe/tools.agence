@@ -3,14 +3,20 @@
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Form\AccountInvitationType;
 use App\Form\UserType;
+use App\Repository\PersonnelRepository;
 use App\Repository\RoleRepository;
 use App\Security\Permission;
+use App\Service\AccountProvisioner;
 use App\Service\ActivityLogger;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -24,6 +30,8 @@ class UserController extends AbstractController
         private readonly UserPasswordHasherInterface $hasher,
         private readonly ActivityLogger $activity,
         private readonly RoleRepository $roles,
+        private readonly AccountProvisioner $accounts,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -59,6 +67,44 @@ class UserController extends AbstractController
         }
 
         return $this->render('admin/users/form.html.twig', ['form' => $form, 'user' => $user, 'isNew' => true]);
+    }
+
+    /** Création d'un compte depuis une fiche du personnel : le mot de passe temporaire part par e-mail. */
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/depuis-personnel/{id}', name: 'app_admin_user_from_personnel', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
+    public function fromPersonnel(Request $request, int $id, PersonnelRepository $personnel): Response
+    {
+        $person = $personnel->findActive($id) ?? throw $this->createNotFoundException('Fiche introuvable.');
+        if ($person->getUser() || !$person->isActive()) {
+            $this->addFlash('error', $person->getUser() ? 'Cette personne a déjà un compte.' : 'Cette personne est partie : aucun compte ne peut lui être créé.');
+
+            return $this->redirectToRoute('app_personnel_show', ['id' => $id]);
+        }
+
+        $form = $this->createForm(AccountInvitationType::class, [
+            'email' => $person->getEmail() && User::isAllowedEmail($person->getEmail()) ? $person->getEmail() : null,
+            'role' => $this->roles->findOneByCode(User::ROLE_AGENT),
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $email = mb_strtolower(trim($form->get('email')->getData()));
+            if ($this->em->getRepository(User::class)->findOneBy(['email' => $email])) {
+                $form->get('email')->addError(new FormError('Un compte existe déjà avec cet e-mail.'));
+            } else {
+                try {
+                    $user = $this->accounts->createAccount($person, $email, $form->get('role')->getData());
+                    $this->activity->log('user.create', ['id' => $user->getId(), 'email' => $email, 'role' => $user->getRoleLabel(), 'fiche' => $person->getId(), 'mot_de_passe_envoye' => true]);
+                    $this->addFlash('success', sprintf('Compte créé pour %s. Le mot de passe temporaire a été envoyé à %s (valable %d h).', $person->getFullName(), $email, AccountProvisioner::PASSWORD_VALID_HOURS));
+
+                    return $this->redirectToRoute('app_personnel_show', ['id' => $id]);
+                } catch (TransportExceptionInterface $e) {
+                    $form->addError(new FormError($this->mailFailure($e).' Aucun compte n\'a été créé.'));
+                }
+            }
+        }
+
+        return $this->render('admin/users/from_personnel.html.twig', ['form' => $form, 'person' => $person, 'hours' => AccountProvisioner::PASSWORD_VALID_HOURS]);
     }
 
     #[IsGranted('ROLE_ADMIN')]
@@ -129,17 +175,55 @@ class UserController extends AbstractController
         return $this->redirectToRoute('app_admin_users');
     }
 
+    /** Authentificateur perdu : on le réinitialise et un nouveau mot de passe temporaire part par e-mail. */
     #[IsGranted('ROLE_ADMIN')]
     #[Route('/{id}/reset-2fa', name: 'app_admin_user_reset2fa', methods: 'POST', requirements: ['id' => '\d+'])]
     public function reset2fa(Request $request, User $user): Response
     {
         $this->checkCsrf($request, 'user_'.$user->getId());
-        $user->setTotpSecret(null);
-        $this->em->flush();
-        $this->activity->log('auth.2fa_reset', ['id' => $user->getId(), 'email' => $user->getEmail()]);
-        $this->addFlash('success', sprintf('Authentificateur de %s réinitialisé : à sa prochaine connexion, il utilisera son mot de passe puis réactivera Google Authenticator.', $user->getFullName()));
+
+        try {
+            $this->accounts->resetTwoFactor($user, 'reset');
+            $this->em->flush();
+            $this->activity->log('auth.2fa_reset', ['id' => $user->getId(), 'email' => $user->getEmail(), 'mot_de_passe_envoye' => true]);
+            $this->addFlash('success', sprintf('Authentificateur de %s réinitialisé. Un mot de passe temporaire lui a été envoyé (valable %d h) pour réactiver Google Authenticator.', $user->getFullName(), AccountProvisioner::PASSWORD_VALID_HOURS));
+        } catch (TransportExceptionInterface $e) {
+            $this->addFlash('error', $this->mailFailure($e).' L\'authentificateur n\'a pas été modifié.');
+        }
 
         return $this->redirectToRoute('app_admin_users');
+    }
+
+    /** Renvoie un mot de passe temporaire à un compte qui n'a pas encore activé son authentificateur (mot de passe expiré ou perdu). */
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}/resend-password', name: 'app_admin_user_resend', methods: 'POST', requirements: ['id' => '\d+'])]
+    public function resendPassword(Request $request, User $user): Response
+    {
+        $this->checkCsrf($request, 'user_'.$user->getId());
+
+        if ($user->hasTwoFactor() || !$user->isActive()) {
+            $this->addFlash('error', 'Ce compte est désactivé ou a déjà activé son authentificateur : utilisez « Réinit. 2FA » si besoin.');
+
+            return $this->redirectToRoute('app_admin_users');
+        }
+
+        try {
+            $this->accounts->issueTemporaryPassword($user, 'resend');
+            $this->em->flush();
+            $this->activity->log('user.password_sent', ['id' => $user->getId(), 'email' => $user->getEmail()]);
+            $this->addFlash('success', sprintf('Nouveau mot de passe temporaire envoyé à %s (valable %d h).', $user->getEmail(), AccountProvisioner::PASSWORD_VALID_HOURS));
+        } catch (TransportExceptionInterface $e) {
+            $this->addFlash('error', $this->mailFailure($e));
+        }
+
+        return $this->redirectToRoute('app_admin_users');
+    }
+
+    private function mailFailure(\Throwable $e): string
+    {
+        $this->logger->error('Envoi d\'e-mail de compte impossible : '.$e->getMessage());
+
+        return 'L\'e-mail n\'a pas pu être envoyé (vérifiez MAILER_DSN).';
     }
 
     private function otherActiveAdmins(User $except): int

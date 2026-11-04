@@ -1,0 +1,27 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Projets et missions : onglets entre le tableau, la liste des projets, le calendrier et la liste des missions, et le bilan de période. #}
+
+{% block page_title %}Projets et missions{% endblock %}
+
+{% block page_actions %}
+    {% set route = app.request.attributes.get('_route') %}
+    {% block pm_actions %}
+        {% if route starts with 'app_mission' %}
+            {% if is_granted('mission.plan') %}<a class="btn" href="{{ path('app_mission_new') }}">+ Programmer une mission</a>{% endif %}
+        {% elseif is_granted('projet.edit') %}
+            <a class="btn" href="{{ path('app_projet_new') }}">+ Nouveau projet</a>
+        {% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set route = app.request.attributes.get('_route') %}
+    <nav class="tabs">
+        <a href="{{ path('app_projets') }}" class="{{ route in ['app_projets', 'app_projet_show', 'app_projet_new', 'app_projet_edit', 'app_tache_new', 'app_tache_edit'] ? 'active' }}">Tableau des projets</a>
+        <a href="{{ path('app_projets_list') }}" class="{{ route == 'app_projets_list' ? 'active' }}">Liste des projets</a>
+        <a href="{{ path('app_missions') }}" class="{{ route in ['app_missions', 'app_mission_show', 'app_mission_new', 'app_mission_edit'] ? 'active' }}">Calendrier des missions</a>
+        <a href="{{ path('app_missions_list') }}" class="{{ route == 'app_missions_list' ? 'active' }}">Missions</a>
+        {% if is_granted('mission.plan') %}<a href="{{ path('app_missions_review') }}" class="{{ route == 'app_missions_review' ? 'active' }}">Bilan de période</a>{% endif %}
+    </nav>
+{% endblock %}

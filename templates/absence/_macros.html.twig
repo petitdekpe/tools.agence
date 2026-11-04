@@ -1,0 +1,8 @@
+{# Pastille de statut d'une absence. #}
+{% macro state(absence) %}
+    {%- if absence.statut == 'approuvee' -%}<span class="chip chip-ok">Approuvée</span>
+    {%- elseif absence.statut == 'refusee' -%}<span class="chip chip-bad">Refusée</span>
+    {%- elseif absence.statut == 'annulee' -%}<span class="chip chip-muted">Annulée</span>
+    {%- else -%}<span class="chip chip-warn">En attente</span>
+    {%- endif -%}
+{% endmacro %}

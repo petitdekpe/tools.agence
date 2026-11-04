@@ -1,0 +1,135 @@
+{% extends 'depense/layout.html.twig' %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_depenses', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% macro state(d) %}
+    {%- if d.paid -%}<span class="chip chip-ok">Payée</span>
+    {%- elseif d.overdue -%}<span class="chip chip-bad">En retard</span>
+    {%- else -%}<span class="chip chip-info">À payer</span>
+    {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+    <section class="stats">
+        <a class="stat" href="{{ path('app_depenses', {from: 'now'|date('Y-m-01')}) }}">
+            <span class="stat-label">Dépensé ce mois-ci</span>
+            <strong>{{ dashboard.monthTtc|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.monthCount }} dépense{{ dashboard.monthCount > 1 ? 's' }} TTC</small>
+        </a>
+        <a class="stat" href="{{ path('app_depenses', {etat: 'apayer'}) }}">
+            <span class="stat-label">Reste à payer</span>
+            <strong>{{ dashboard.unpaid|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.unpaidCount }} dépense{{ dashboard.unpaidCount > 1 ? 's' }} non payée{{ dashboard.unpaidCount > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_depenses', {etat: 'retard'}) }}">
+            <span class="stat-label">En retard de paiement</span>
+            <strong>{{ dashboard.overdue|fcfa_number }} <em>FCFA</em></strong>
+            <small>{{ dashboard.overdueCount }} échéance{{ dashboard.overdueCount > 1 ? 's' }} dépassée{{ dashboard.overdueCount > 1 ? 's' }}</small>
+        </a>
+        <a class="stat" href="{{ path('app_depenses_summary', {from: 'now'|date('Y-m-01')}) }}">
+            <span class="stat-label">TVA déductible du mois</span>
+            <strong>{{ dashboard.monthTva|fcfa_number }} <em>FCFA</em></strong>
+            <small>à déduire de la TVA à reverser</small>
+        </a>
+    </section>
+
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Fournisseur, libellé ou n° de facture…" aria-label="Rechercher">
+        <select name="categorie" aria-label="Catégorie">
+            <option value="">Toutes les catégories</option>
+            {% for key, label in constant('App\\Entity\\Depense::CATEGORIES') %}<option value="{{ key }}" {{ filter.categorie == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="etat" aria-label="État">
+            <option value="">Tous les états</option>
+            {% for key, label in constant('App\\Dto\\DepenseFilter::ETATS') %}<option value="{{ key }}" {{ filter.etat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="mode" aria-label="Mode de paiement">
+            <option value="">Tous les modes</option>
+            {% for key, label in constant('App\\Entity\\Depense::MODES') %}<option value="{{ key }}" {{ filter.mode == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
+        <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_depenses') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} dépense{{ total > 1 ? 's' }}{% if filter.isActive %} (filtrée{{ total > 1 ? 's' }}){% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('date', 'Date', filter) }}
+                    {{ _self.sort('fournisseur', 'Fournisseur', filter) }}
+                    {{ _self.sort('categorie', 'Catégorie', filter) }}
+                    {{ _self.sort('ttc', 'TTC', filter, 'num') }}
+                    <th class="num">TVA déductible</th>
+                    {{ _self.sort('echeance', 'Échéance', filter) }}
+                    {{ _self.sort('paiement', 'Payée le', filter) }}
+                    <th>État</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for d in rows %}
+                <tr>
+                    <td class="nowrap">{{ d.dateDepense|date('d/m/Y') }}</td>
+                    <td><strong>{{ d.fournisseur }}</strong><small class="block muted">{{ d.libelle }}{% if d.numeroPiece %} · n° {{ d.numeroPiece }}{% endif %}</small></td>
+                    <td>{{ d.categorieLabel }}</td>
+                    <td class="num"><strong>{{ d.montantTtc|fcfa_number }}</strong></td>
+                    <td class="num">{{ d.montantTva|fcfa_number }}</td>
+                    <td class="nowrap">{{ d.echeance ? d.echeance|date('d/m/Y') : '—' }}</td>
+                    <td class="nowrap">{% if d.paid %}{{ d.datePaiement|date('d/m/Y') }}<small class="block muted">{{ d.modeLabel }}</small>{% else %}—{% endif %}</td>
+                    <td>{{ _self.state(d) }}</td>
+                    <td class="right">
+                        <div class="row-actions">
+                            {% if is_granted('depense.edit') %}
+                                {% if not d.paid %}<a class="ghost" href="{{ path('app_depense_edit', {id: d.id, payer: 1}) }}">Payer</a>{% endif %}
+                                <a class="ghost" href="{{ path('app_depense_edit', {id: d.id}) }}">Modifier</a>
+                            {% endif %}
+                            {% if is_granted('depense.delete') %}
+                                <form method="post" action="{{ path('app_depense_delete', {id: d.id}) }}"
+                                      onsubmit="return confirm('Supprimer la dépense de {{ d.fournisseur|e('js') }} du {{ d.dateDepense|date('d/m/Y') }} ?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('depense_' ~ d.id) }}">
+                                    <button class="ghost danger" type="submit">Supprimer</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="9" class="muted">Aucune dépense{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if totals.n > 0 %}
+                <tfoot>
+                    <tr>
+                        <td colspan="3">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }}</td>
+                        <td class="num">{{ totals.ttc|fcfa_number }}</td>
+                        <td class="num">{{ totals.tva|fcfa_number }}</td>
+                        <td colspan="4"></td>
+                    </tr>
+                </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    <p class="muted small">Montants en FCFA. Les totaux couvrent toutes les lignes correspondant aux filtres, pas seulement la page affichée.</p>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_depenses', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_depenses', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

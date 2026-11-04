@@ -1,0 +1,16 @@
+{# Pastilles de statut et de priorité d'un ticket. #}
+{% macro state(ticket) %}
+    {%- if ticket.statut == 'resolu' -%}<span class="chip chip-ok">Résolu</span>
+    {%- elseif ticket.statut == 'rejete' -%}<span class="chip chip-muted">Rejeté</span>
+    {%- elseif ticket.statut == 'en_cours' -%}<span class="chip chip-warn">En cours</span>
+    {%- else -%}<span class="chip chip-info">Ouvert</span>
+    {%- endif -%}
+{% endmacro %}
+
+{% macro priority(ticket) %}
+    {%- if ticket.priorite == 'urgente' -%}<span class="chip chip-bad">Urgente</span>
+    {%- elseif ticket.priorite == 'haute' -%}<span class="chip chip-warn">Haute</span>
+    {%- elseif ticket.priorite == 'basse' -%}<span class="chip chip-muted">Basse</span>
+    {%- else -%}<span class="muted">Normale</span>
+    {%- endif -%}
+{% endmacro %}

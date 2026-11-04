@@ -29,12 +29,19 @@ class ActivityController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
 
         $qb = $em->createQueryBuilder()->select('l')->from(ActivityLog::class, 'l')->orderBy('l.createdAt', 'DESC')->addOrderBy('l.id', 'DESC');
+        // Le journal d'une fiche du personnel en reprend le contenu (contrat, téléphone, notes) : il suit les droits sur le personnel.
+        $hr = $this->isGranted(Permission::PERSONNEL_VIEW);
+        $categories = $hr ? ActivityLog::CATEGORIES : array_diff_key(ActivityLog::CATEGORIES, ['personnel' => true]);
+        $actions = $hr ? ActivityLog::LABELS : array_filter(ActivityLog::LABELS, static fn (string $key): bool => !str_starts_with($key, 'personnel.'), ARRAY_FILTER_USE_KEY);
+        if (!$hr) {
+            $qb->andWhere('l.action NOT LIKE :hr')->setParameter('hr', 'personnel.%');
+        }
         if ($userId) {
             $qb->andWhere('l.user = :user')->setParameter('user', $userId);
         }
-        if (isset(ActivityLog::LABELS[$action])) {
+        if (isset($actions[$action])) {
             $qb->andWhere('l.action = :action')->setParameter('action', $action);
-        } elseif (isset(ActivityLog::CATEGORIES[$category])) {
+        } elseif (isset($categories[$category])) {
             $qb->andWhere('l.action LIKE :cat')->setParameter('cat', $category.'.%');
         }
         if ($from) {
@@ -53,8 +60,8 @@ class ActivityController extends AbstractController
             'page' => $page,
             'pages' => max(1, (int) ceil($total / self::PER_PAGE)),
             'users' => $em->getRepository(User::class)->findBy([], ['fullName' => 'ASC']),
-            'categories' => ActivityLog::CATEGORIES,
-            'actions' => ActivityLog::LABELS,
+            'categories' => $categories,
+            'actions' => $actions,
             'filters' => ['user' => $userId, 'category' => $category, 'action' => $action, 'from' => $request->query->get('from'), 'to' => $request->query->get('to')],
         ]);
     }

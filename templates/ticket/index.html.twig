@@ -1,0 +1,99 @@
+{% extends 'ticket/layout.html.twig' %}
+{% import 'ticket/_macros.html.twig' as m %}
+
+{% macro sort(key, label, filter, class = '') %}
+    {% set dir = filter.sort == key and filter.dir == 'asc' ? 'desc' : 'asc' %}
+    <th class="{{ class }}{{ filter.sort == key ? ' sorted' }}">
+        <a href="{{ path('app_tickets', filter.toQuery(false)|merge({sort: key, dir: dir})) }}">{{ label }}{% if filter.sort == key %} <span aria-hidden="true">{{ filter.dir == 'asc' ? '▲' : '▼' }}</span>{% endif %}</a>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    {% set isPanne = filter.type == 'panne' %}
+
+    <section class="stats">
+        <a class="stat" href="{{ path('app_tickets', {type: 'panne', etat: 'ouvert'}) }}">
+            <span class="stat-label">Ouverts</span>
+            <strong>{{ dashboard.open }}</strong>
+            <small>pannes et demandes à prendre en charge</small>
+        </a>
+        <a class="stat" href="{{ path('app_tickets', {type: filter.type, etat: 'en_cours'}) }}">
+            <span class="stat-label">En cours</span>
+            <strong>{{ dashboard.inProgress }}</strong>
+            <small>en cours de traitement</small>
+        </a>
+        <a class="stat" href="{{ path('app_tickets', {type: filter.type, etat: 'actifs', priorite: 'urgente'}) }}">
+            <span class="stat-label">Urgents</span>
+            <strong>{{ dashboard.urgent }}</strong>
+            <small>à traiter en priorité</small>
+        </a>
+        <a class="stat" href="{{ path('app_tickets', {type: filter.type, etat: 'resolu'}) }}">
+            <span class="stat-label">Résolus ce mois-ci</span>
+            <strong>{{ dashboard.closedThisMonth }}</strong>
+            <small>depuis le début du mois</small>
+        </a>
+    </section>
+
+    <form method="get" class="filters enc-filters">
+        <input type="hidden" name="type" value="{{ filter.type }}">
+        <input type="hidden" name="sort" value="{{ filter.sort }}">
+        <input type="hidden" name="dir" value="{{ filter.dir }}">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Numéro, titre ou équipement…" aria-label="Rechercher">
+        <select name="etat" aria-label="Statut">
+            <option value="">Tous les statuts</option>
+            {% for key, label in constant('App\\Dto\\TicketFilter::ETATS') %}<option value="{{ key }}" {{ filter.etat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select name="priorite" aria-label="Priorité">
+            <option value="">Toutes les priorités</option>
+            {% for key, label in constant('App\\Entity\\Ticket::PRIORITES') %}<option value="{{ key }}" {{ filter.priorite == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_tickets', {type: filter.type}) }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="enc-toolbar">
+        <span class="muted">{{ total }} {{ isPanne ? 'panne' : 'demande' }}{{ total > 1 ? 's' }}{% if filter.isActive %} (filtrée{{ total > 1 ? 's' }}){% endif %}</span>
+    </div>
+
+    <div class="table-card">
+        <table class="table enc-table">
+            <thead>
+                <tr>
+                    {{ _self.sort('reference', 'Numéro', filter) }}
+                    {{ _self.sort('titre', 'Titre', filter) }}
+                    <th>Équipement</th>
+                    {{ _self.sort('priorite', 'Priorité', filter) }}
+                    <th>Signalé par</th>
+                    {{ _self.sort('date', 'Date', filter) }}
+                    {{ _self.sort('statut', 'Statut', filter) }}
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in rows %}
+                <tr class="{{ t.active ? '' : 'inactive' }}">
+                    <td class="nowrap"><a href="{{ path('app_ticket_show', {id: t.id}) }}"><strong>{{ t.reference }}</strong></a></td>
+                    <td class="obs"><a href="{{ path('app_ticket_show', {id: t.id}) }}">{{ t.titre }}</a></td>
+                    <td>{{ t.materiel ? t.materiel.designation : (t.categorieLabel ?: '—') }}</td>
+                    <td>{{ m.priority(t) }}</td>
+                    <td>{{ t.createdBy ? t.createdBy.fullName : '—' }}</td>
+                    <td class="nowrap">{{ t.createdAt|date('d/m/Y') }}</td>
+                    <td>{{ m.state(t) }}</td>
+                    <td class="right"><a class="ghost" href="{{ path('app_ticket_show', {id: t.id}) }}">Ouvrir</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="muted">Aucune {{ isPanne ? 'panne' : 'demande' }}{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pages > 1 %}
+        <nav class="pager">
+            {% set q = filter.toQuery %}
+            {% if page > 1 %}<a class="ghost" href="{{ path('app_tickets', q|merge({page: page - 1})) }}">← Précédent</a>{% endif %}
+            <span class="muted">Page {{ page }} / {{ pages }}</span>
+            {% if page < pages %}<a class="ghost" href="{{ path('app_tickets', q|merge({page: page + 1})) }}">Suivant →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

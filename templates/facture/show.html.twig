@@ -1,0 +1,137 @@
+{% extends 'facture/layout.html.twig' %}
+{% import 'facture/_macros.html.twig' as m %}
+
+{% macro status(document, token, statut, label, primary = false) %}
+    <form method="post" action="{{ path('app_facture_status', {id: document.id}) }}">
+        <input type="hidden" name="_token" value="{{ token }}">
+        <input type="hidden" name="statut" value="{{ statut }}">
+        <button class="{{ primary ? 'btn' : 'btn-outline' }}" type="submit">{{ label }}</button>
+    </form>
+{% endmacro %}
+
+{% block page_title %}{{ document.reference }}{% endblock %}
+
+{% block doc_actions %}
+    <a class="ghost" href="{{ path('app_factures', {type: document.type}) }}">← Retour à la liste</a>
+    {% if is_granted('facture.edit') %}<a class="btn" href="{{ path('app_facture_edit', {id: document.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('document_' ~ document.id) %}
+    {% set settled = document.isFacture and document.settlement(paid) == 'soldee' %}
+
+    {% if document.isFacture and document.isOverdue(paid) %}
+        <div class="banner bad"><span><strong>En retard</strong> : l'échéance du {{ document.dateLimite|date('d/m/Y') }} est dépassée, il reste {{ document.balance(paid)|fcfa }} à encaisser.</span></div>
+    {% elseif document.isExpired %}
+        <div class="banner warn"><span><strong>Devis expiré</strong> : sa validité s'est terminée le {{ document.dateLimite|date('d/m/Y') }}.</span></div>
+    {% endif %}
+
+    {% if is_granted('facture.edit') and document.statut != 'annulee' %}
+        <div class="enc-toolbar">
+            <span class="row-actions">
+                {% if document.isFacture %}
+                    {% if document.statut == 'brouillon' %}{{ _self.status(document, token, 'emise', 'Émettre la facture', true) }}{% endif %}
+                    {% if document.statut == 'emise' and is_granted('encaissement.edit') and not settled %}
+                        <a class="btn" href="{{ path('app_encaissement_new', {facture: document.id}) }}">+ Enregistrer un encaissement</a>
+                    {% endif %}
+                    {% if payments is empty %}{{ _self.status(document, token, 'annulee', 'Annuler la facture') }}{% endif %}
+                {% else %}
+                    {% if document.statut == 'brouillon' %}{{ _self.status(document, token, 'envoye', 'Marquer comme envoyé', true) }}{% endif %}
+                    {% if document.statut == 'envoye' %}
+                        {{ _self.status(document, token, 'accepte', 'Devis accepté', true) }}
+                        {{ _self.status(document, token, 'refuse', 'Devis refusé') }}
+                    {% endif %}
+                    {% if document.statut == 'accepte' and invoices is empty %}
+                        <form method="post" action="{{ path('app_facture_convert', {id: document.id}) }}">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <button class="btn" type="submit">Transformer en facture</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>{{ document.typeLabel }}</h2>
+            <dl class="facts">
+                <div><dt>État</dt><dd>{{ m.state(document, paid) }}</dd></div>
+                <div><dt>Numéro</dt><dd>{{ document.reference }}</dd></div>
+                <div><dt>Client</dt><dd>{{ document.client.name }}{% if not document.client.hasIfu %} <small class="muted">(sans IFU)</small>{% endif %}</dd></div>
+                <div><dt>Objet</dt><dd>{{ document.objet }}</dd></div>
+                <div><dt>Date d'émission</dt><dd>{{ document.dateEmission|date('d/m/Y') }}</dd></div>
+                <div><dt>{{ document.isFacture ? 'Échéance' : 'Valable jusqu\'au' }}</dt><dd>{{ document.dateLimite ? document.dateLimite|date('d/m/Y') : '—' }}</dd></div>
+                {% if document.sourceDevis %}
+                    <div><dt>Établie d'après</dt><dd><a href="{{ path('app_facture_show', {id: document.sourceDevis.id}) }}">{{ document.sourceDevis.reference }}</a></dd></div>
+                {% endif %}
+                {% if document.observation %}<div><dt>Observation</dt><dd class="kv-text">{{ document.observation }}</dd></div>{% endif %}
+                {% if document.createdBy %}<div><dt>Saisi par</dt><dd>{{ document.createdBy.fullName }}</dd></div>{% endif %}
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2>Montants</h2>
+            <dl class="calc">
+                <div><dt>Montant HT</dt><dd>{{ document.montantHt|fcfa }}</dd></div>
+                <div><dt>TVA ({{ document.tauxTva|number_format(2, ',', ' ') }} %)</dt><dd>{{ document.montantTva|fcfa }}</dd></div>
+                <div class="total"><dt>Total TTC</dt><dd>{{ document.montantTtc|fcfa }}</dd></div>
+            </dl>
+            {% if document.isFacture and document.statut == 'emise' %}
+                {% set pct = document.montantTtc > 0 ? min(100, (paid / document.montantTtc * 100)|round) : 0 %}
+                <dl class="calc">
+                    <div><dt>Déjà encaissé</dt><dd>{{ paid|fcfa }}</dd></div>
+                    <div class="total"><dt>Reste à encaisser</dt><dd>{{ document.balance(paid)|fcfa }}</dd></div>
+                </dl>
+                <div class="bar"><div class="bar-fill" style="width: {{ pct }}%"></div></div>
+                <p class="muted small">{{ pct }} % encaissé.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if document.isFacture %}
+        <h2>Encaissements rattachés</h2>
+        <div class="table-card">
+            <table class="table enc-table">
+                <thead><tr><th>Date</th><th>Nature</th><th class="num">TTC encaissé</th><th class="num">Net reçu</th><th class="right">Actions</th></tr></thead>
+                <tbody>
+                {% for e in payments %}
+                    <tr>
+                        <td class="nowrap">{{ e.dateEncaissement|date('d/m/Y') }}</td>
+                        <td>{{ e.natureLabel }}</td>
+                        <td class="num">{{ e.montantTtc|fcfa_number }}</td>
+                        <td class="num">{{ e.montantNetRecu|fcfa_number }}</td>
+                        <td class="right">{% if is_granted('encaissement.edit') %}<a class="ghost" href="{{ path('app_encaissement_edit', {id: e.id}) }}">Modifier</a>{% endif %}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="muted">Aucun encaissement rattaché pour l'instant.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elseif invoices %}
+        <h2>Factures établies</h2>
+        <div class="table-card">
+            <table class="table enc-table">
+                <thead><tr><th>Numéro</th><th>Émission</th><th class="num">TTC</th></tr></thead>
+                <tbody>
+                {% for f in invoices %}
+                    <tr>
+                        <td><a href="{{ path('app_facture_show', {id: f.id}) }}"><strong>{{ f.reference }}</strong></a></td>
+                        <td class="nowrap">{{ f.dateEmission|date('d/m/Y') }}</td>
+                        <td class="num">{{ f.montantTtc|fcfa_number }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    {% if is_granted('facture.delete') %}
+        <form method="post" action="{{ path('app_facture_delete', {id: document.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer {{ document.reference|e('js') }} ?')">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="ghost danger" type="submit">Supprimer {{ document.isFacture ? 'cette facture' : 'ce devis' }}</button>
+        </form>
+    {% endif %}
+{% endblock %}

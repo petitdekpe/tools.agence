@@ -1,0 +1,64 @@
+{% extends 'calendrier/layout.html.twig' %}
+{% import 'calendrier/_macros.html.twig' as m %}
+
+{% block page_title %}{{ publication.titre }}{% endblock %}
+
+{% block pub_actions %}
+    <a class="ghost" href="{{ path('app_calendrier', {mois: publication.datePublication|date('Y-m')}) }}">← Retour au calendrier</a>
+    {% if is_granted('calendrier.edit') %}<a class="btn" href="{{ path('app_publication_edit', {id: publication.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('publication_' ~ publication.id) %}
+
+    {% if publication.late %}
+        <div class="banner bad"><span><strong>En retard</strong> : la date de publication ({{ publication.datePublication|date('d/m/Y') }}) est passée et la publication n'est pas encore sortie.</span></div>
+    {% elseif publication.awaitingReview and is_granted('calendrier.validate') %}
+        <div class="banner warn"><span><strong>À valider</strong> : cette publication attend votre relecture.</span></div>
+    {% endif %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>Fiche</h2>
+            <dl class="facts">
+                <div><dt>Statut</dt><dd>{{ m.state(publication) }}</dd></div>
+                <div><dt>Date</dt><dd>{{ publication.datePublication|date('d/m/Y') }}{% if publication.heure %} à {{ publication.heure|date('H:i') }}{% endif %}</dd></div>
+                <div><dt>Canal</dt><dd>{{ publication.canalLabel }} · {{ publication.formatLabel }}</dd></div>
+                <div><dt>Client</dt><dd>{{ publication.client ? publication.client.name : 'PROCOM (interne)' }}</dd></div>
+                <div><dt>Responsable</dt><dd>{{ publication.responsable ? publication.responsable.fullName : '—' }}</dd></div>
+                {% if publication.lien %}<div><dt>En ligne</dt><dd><a href="{{ publication.lien }}" target="_blank" rel="noopener noreferrer">Voir la publication</a></dd></div>{% endif %}
+                {% if publication.createdBy %}<div><dt>Créée par</dt><dd>{{ publication.createdBy.fullName }}</dd></div>{% endif %}
+            </dl>
+        </section>
+
+        {% if is_granted('calendrier.edit') %}
+            <section class="panel">
+                <h2>Avancement</h2>
+                <form method="post" action="{{ path('app_publication_status', {id: publication.id}) }}" class="form">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <label for="statut">Passer au statut</label>
+                    <select id="statut" name="statut">
+                        {% for key, label in statuts %}<option value="{{ key }}" {{ publication.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+                    </select>
+                    <button class="btn" type="submit">Mettre à jour</button>
+                </form>
+                {% if is_granted('correcteur.use') %}
+                    <p class="muted small">Avant de valider, faites relire le texte dans le <a href="{{ path('app_correcteur') }}">Correcteur média</a>.</p>
+                {% endif %}
+            </section>
+        {% endif %}
+    </div>
+
+    {% if publication.contenu %}
+        <h2>Texte</h2>
+        <div class="panel"><p class="kv-text">{{ publication.contenu }}</p></div>
+    {% endif %}
+
+    {% if is_granted('calendrier.delete') %}
+        <form method="post" action="{{ path('app_publication_delete', {id: publication.id}) }}" class="danger-zone"
+              onsubmit="return confirm('Supprimer cette publication ?')">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="ghost danger" type="submit">Supprimer cette publication</button>
+        </form>
+    {% endif %}
+{% endblock %}

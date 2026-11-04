@@ -8,6 +8,7 @@ use App\Entity\Encaissement;
 use App\Entity\User;
 use App\Form\EncaissementType;
 use App\Repository\ClientRepository;
+use App\Repository\DocumentRepository;
 use App\Repository\EncaissementRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
@@ -31,6 +32,7 @@ class EncaissementController extends AbstractController
         private readonly EncaissementRepository $encaissements,
         private readonly ActivityLogger $activity,
         private readonly FiscalSettings $fiscal,
+        private readonly DocumentRepository $documents,
     ) {
     }
 
@@ -71,6 +73,16 @@ class EncaissementController extends AbstractController
         }
         if ($clientId = $request->query->getInt('client')) {
             $encaissement->setClient($this->em->getRepository(Client::class)->find($clientId));
+        }
+        // Depuis la fiche d'une facture : le client et le reste à encaisser sont repris.
+        if ($factureId = $request->query->getInt('facture')) {
+            $facture = $this->documents->findActive($factureId);
+            if ($facture && $facture->isFacture()) {
+                $encaissement->setFacture($facture)->setClient($facture->getClient());
+                if (($balance = $facture->balance($this->documents->paidFor($facture))) > 0) {
+                    $encaissement->setMontantTtc((string) $balance);
+                }
+            }
         }
 
         $form = $this->createForm(EncaissementType::class, $encaissement);

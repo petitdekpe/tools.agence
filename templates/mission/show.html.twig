@@ -1,0 +1,88 @@
+{% extends 'projet/layout.html.twig' %}
+{% import 'projet/_macros.html.twig' as m %}
+
+{% block page_title %}{{ mission.titre }}{% endblock %}
+
+{% block pm_actions %}
+    <a class="ghost" href="{{ path('app_missions', {mois: mission.dateDebut|date('Y-m')}) }}">← Calendrier</a>
+    {% if is_granted('mission.plan') %}<a class="btn" href="{{ path('app_mission_edit', {id: mission.id}) }}">Modifier</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('mission_' ~ mission.id) %}
+
+    {% if mission.toClose %}
+        <div class="banner bad"><span><strong>À clôturer</strong> : la mission s'est terminée le {{ mission.dateFin|date('d/m/Y') }} et n'a pas encore de compte rendu.</span></div>
+    {% endif %}
+    {% for conflict in conflicts %}
+        <div class="banner warn"><span><strong>Conflit</strong> : {{ conflict }}</span></div>
+    {% endfor %}
+
+    <div class="detail">
+        <section class="panel">
+            <h2>Mission</h2>
+            <dl class="facts">
+                <div><dt>Statut</dt><dd>{{ m.mission_state(mission) }}</dd></div>
+                <div><dt>Lieu</dt><dd>{{ mission.lieu }}</dd></div>
+                <div><dt>Dates</dt><dd>{{ mission.dateDebut|date('d/m/Y') }}{% if mission.dateFin != mission.dateDebut %} → {{ mission.dateFin|date('d/m/Y') }}{% endif %} <small class="muted">({{ mission.days }} jour{{ mission.days > 1 ? 's' }})</small></dd></div>
+                {% if mission.heureDebut %}<div><dt>Départ</dt><dd>{{ mission.heureDebut|date('H:i') }}</dd></div>{% endif %}
+                <div><dt>Projet</dt><dd>{% if mission.projet %}<a href="{{ path('app_projet_show', {id: mission.projet.id}) }}">{{ mission.projet.nom }}</a>{% else %}—{% endif %}</dd></div>
+                <div><dt>Client</dt><dd>{{ mission.effectiveClient ? mission.effectiveClient.name : '—' }}</dd></div>
+                <div><dt>Chef de mission</dt><dd>{{ mission.responsable ? mission.responsable.fullName : '—' }}</dd></div>
+                <div><dt>Équipe</dt><dd>{% set team = mission.equipe|filter(p => p != mission.responsable) %}{{ team|length ? team|map(p => p.fullName)|join(', ') : '—' }}</dd></div>
+            </dl>
+            {% if mission.objectifs %}<h3>Objectifs et consignes</h3><p class="kv-text">{{ mission.objectifs }}</p>{% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Compte rendu</h2>
+            {% if mission.reportedAt %}
+                <dl class="facts">
+                    <div><dt>Résultat</dt><dd>{{ mission.resultatLabel ?: '—' }}</dd></div>
+                    <div><dt>Rédigé le</dt><dd>{{ mission.reportedAt|date('d/m/Y') }}</dd></div>
+                </dl>
+                {% if mission.compteRendu %}<p class="kv-text">{{ mission.compteRendu }}</p>{% else %}<p class="muted">Aucun commentaire.</p>{% endif %}
+            {% elseif mission.statut == 'annulee' %}
+                <p class="muted">Mission annulée.</p>
+            {% elseif mission.dateDebut > date('today') %}
+                <p class="muted">Le compte rendu se rédige à partir du premier jour de la mission.</p>
+            {% elseif not canReport %}
+                <p class="muted">Le compte rendu est rédigé par l'équipe de la mission ou le responsable de programmation.</p>
+            {% endif %}
+
+            {% if canReport and mission.statut != 'annulee' and mission.dateDebut <= date('today') %}
+                <form method="post" action="{{ path('app_mission_report', {id: mission.id}) }}" class="form">
+                    <input type="hidden" name="_token" value="{{ token }}">
+                    <label for="resultat">Les objectifs ont-ils été atteints ?</label>
+                    <select id="resultat" name="resultat" required>
+                        <option value="">Choisir…</option>
+                        {% for key, label in resultats %}<option value="{{ key }}" {{ mission.resultat == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+                    </select>
+                    <label for="compte_rendu">Retour de terrain</label>
+                    <textarea id="compte_rendu" name="compte_rendu" rows="6" maxlength="6000" placeholder="Ce qui a été fait, les difficultés, les suites à donner…">{{ mission.compteRendu }}</textarea>
+                    <button class="btn" type="submit">{{ mission.reportedAt ? 'Mettre à jour le compte rendu' : 'Clôturer la mission' }}</button>
+                </form>
+            {% endif %}
+        </section>
+    </div>
+
+    {% if is_granted('mission.plan') %}
+        <section class="panel">
+            <h2>Programmation</h2>
+            <form method="post" action="{{ path('app_mission_status', {id: mission.id}) }}" class="form">
+                <input type="hidden" name="_token" value="{{ token }}">
+                <label for="statut">Statut de la mission</label>
+                <select id="statut" name="statut">
+                    {% for key, label in statuts %}{% if key != 'realisee' %}<option value="{{ key }}" {{ mission.statut == key ? 'selected' }}>{{ label }}</option>{% endif %}{% endfor %}
+                </select>
+                <p class="muted small">« Réalisée » s'obtient par le compte rendu. Reporter ou annuler libère l'équipe sur le calendrier.</p>
+                <button class="btn" type="submit">Mettre à jour</button>
+            </form>
+        </section>
+
+        <form method="post" action="{{ path('app_mission_delete', {id: mission.id}) }}" class="danger-zone" onsubmit="return confirm('Supprimer cette mission ?')">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="ghost danger" type="submit">Supprimer cette mission</button>
+        </form>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Pannes et demandes de matériel : onglets entre les deux types et bouton de création du type affiché. #}
+
+{% block page_title %}Pannes et demandes{% endblock %}
+
+{% block page_actions %}
+    {% set currentType = filter is defined ? filter.type : (ticket is defined ? ticket.type : 'panne') %}
+    {% block ticket_actions %}
+        {% if is_granted('ticket.create') %}
+            <a class="btn" href="{{ path('app_ticket_new', {type: currentType}) }}">+ {{ currentType == 'demande' ? 'Nouvelle demande' : 'Signaler une panne' }}</a>
+        {% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set currentType = filter is defined ? filter.type : (ticket is defined ? ticket.type : 'panne') %}
+    <nav class="tabs">
+        <a href="{{ path('app_tickets', {type: 'panne'}) }}" class="{{ currentType == 'panne' ? 'active' }}">Pannes</a>
+        <a href="{{ path('app_tickets', {type: 'demande'}) }}" class="{{ currentType == 'demande' ? 'active' }}">Demandes de matériel</a>
+    </nav>
+{% endblock %}

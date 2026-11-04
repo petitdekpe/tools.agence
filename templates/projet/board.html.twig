@@ -1,0 +1,59 @@
+{% extends 'projet/layout.html.twig' %}
+{% import 'projet/_macros.html.twig' as m %}
+
+{% block content %}
+    {% set editable = is_granted('projet.edit') %}
+
+    <section class="stats">
+        <a class="stat" href="{{ path('app_projets_list', {statut: 'en_cours'}) }}">
+            <span class="stat-label">Projets en cours</span>
+            <strong>{{ dashboard.inProgress }}</strong>
+            <small>sur le tableau</small>
+        </a>
+        <a class="stat" href="{{ path('app_projets_list', {statut: 'ouverts', sort: 'echeance'}) }}">
+            <span class="stat-label">Projets en retard</span>
+            <strong>{{ dashboard.late }}</strong>
+            <small>échéance dépassée</small>
+        </a>
+        <div class="stat">
+            <span class="stat-label">Tâches ouvertes</span>
+            <strong>{{ dashboard.openTasks }}</strong>
+            <small>dans les projets ouverts</small>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Tâches en retard</span>
+            <strong>{{ dashboard.lateTasks }}</strong>
+            <small>échéance dépassée</small>
+        </div>
+    </section>
+
+    <form method="get" class="filters enc-filters">
+        <input type="search" name="q" value="{{ filter.q }}" placeholder="Projet, description ou client…" aria-label="Rechercher">
+        <select name="client" aria-label="Client">
+            <option value="">Tous les clients</option>
+            {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+        </select>
+        <select name="responsable" aria-label="Responsable">
+            <option value="">Tous les responsables</option>
+            {% for p in people %}<option value="{{ p.id }}" {{ filter.responsable == p.id ? 'selected' }}>{{ p.fullName }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+        {% if filter.isActive %}<a class="ghost" href="{{ path('app_projets') }}">Réinitialiser</a>{% endif %}
+    </form>
+
+    <div class="kb" data-controller="kanban" data-kanban-token-value="{{ csrf_token('kanban') }}">
+        {% for key, cards in columns %}
+            <section class="kb-col">
+                <header class="kb-head">
+                    <h3>{{ constant('App\\Entity\\Projet::STATUTS')[key] }}</h3>
+                    <span class="kb-count">{{ cards|length }}</span>
+                </header>
+                <div class="kb-cards" data-kanban-target="column" data-status="{{ key }}"{% if editable %} data-action="dragover->kanban#over dragleave->kanban#leave drop->kanban#drop"{% endif %}>
+                    {% for p in cards %}{{ m.projet_card(p, editable) }}{% endfor %}
+                </div>
+                {% if editable %}<a class="kb-add" href="{{ path('app_projet_new', {statut: key}) }}">+ Ajouter un projet</a>{% endif %}
+            </section>
+        {% endfor %}
+    </div>
+    <p class="muted small">{% if editable %}Faites glisser une carte pour changer le statut d'un projet. {% endif %}Les projets annulés n'apparaissent pas ici : retrouvez-les dans la <a href="{{ path('app_projets_list', {statut: 'annule'}) }}">liste des projets</a>.</p>
+{% endblock %}

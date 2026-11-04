@@ -1,0 +1,11 @@
+{# Pastille de statut d'une publication. #}
+{% macro state(p) %}
+    {%- if p.statut == 'publie' -%}<span class="chip chip-ok">Publié</span>
+    {%- elseif p.statut == 'annule' -%}<span class="chip chip-muted">Annulé</span>
+    {%- elseif p.late -%}<span class="chip chip-bad">En retard</span>
+    {%- elseif p.statut == 'valide' -%}<span class="chip chip-info">Validé</span>
+    {%- elseif p.statut == 'relecture' -%}<span class="chip chip-warn">En relecture</span>
+    {%- elseif p.statut == 'redaction' -%}<span class="chip chip-muted">En rédaction</span>
+    {%- else -%}<span class="chip chip-muted">Idée</span>
+    {%- endif -%}
+{% endmacro %}

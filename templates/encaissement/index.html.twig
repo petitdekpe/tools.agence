@@ -77,7 +77,7 @@
             {% for e in rows %}
                 <tr>
                     <td class="nowrap">{{ e.dateEncaissement|date('d/m/Y') }}</td>
-                    <td><strong>{{ e.client.name }}</strong>{% if not e.client.hasIfu %}<small class="block muted">sans IFU</small>{% endif %}</td>
+                    <td><strong>{{ e.client.name }}</strong>{% if not e.client.hasIfu %}<small class="block muted">sans IFU</small>{% endif %}{% if e.facture %}<small class="block muted">facture {% if is_granted('facture.view') %}<a href="{{ path('app_facture_show', {id: e.facture.id}) }}">{{ e.facture.reference }}</a>{% else %}{{ e.facture.reference }}{% endif %}</small>{% endif %}</td>
                     <td>{% if e.nature == 'facture' %}<span class="muted">{{ e.natureLabel }}</span>{% else %}<span class="chip chip-nature">{{ e.natureLabel }}</span>{% endif %}</td>
                     <td class="num">{{ e.montantTtc|fcfa_number }}</td>
                     <td class="num">{{ e.montantHt|fcfa_number }}</td>

@@ -1,0 +1,19 @@
+{% extends 'layout/page.html.twig' %}
+
+{# Calendrier éditorial : onglets entre la grille mensuelle et la liste, bouton de planification. #}
+
+{% block page_title %}Calendrier éditorial{% endblock %}
+
+{% block page_actions %}
+    {% block pub_actions %}
+        {% if is_granted('calendrier.edit') %}<a class="btn" href="{{ path('app_publication_new') }}">+ Planifier une publication</a>{% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block tabs %}
+    {% set route = app.request.attributes.get('_route') %}
+    <nav class="tabs">
+        <a href="{{ path('app_calendrier') }}" class="{{ route == 'app_calendrier' ? 'active' }}">Calendrier</a>
+        <a href="{{ path('app_publications') }}" class="{{ route != 'app_calendrier' ? 'active' }}">Liste</a>
+    </nav>
+{% endblock %}

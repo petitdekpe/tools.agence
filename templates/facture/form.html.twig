@@ -1,0 +1,22 @@
+{% extends 'facture/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? (document.isFacture ? 'Nouvelle facture' : 'Nouveau devis') : 'Modifier ' ~ document.reference }}{% endblock %}
+{% block doc_actions %}<a class="ghost" href="{{ isNew ? path('app_factures', {type: document.type}) : path('app_facture_show', {id: document.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.reference) }}
+            {{ form_row(form.client) }}
+            {% if isNew %}<small>Client absent de la liste ? <a href="{{ path('app_client_new') }}">Créer le client</a>.</small>{% endif %}
+            {{ form_row(form.objet) }}
+            {{ form_row(form.dateEmission) }}
+            {{ form_row(form.dateLimite) }}
+            {{ form_row(form.montantTtc) }}
+            {{ form_row(form.statut) }}
+            {{ form_row(form.observation) }}
+            <button class="btn" type="submit">{{ isNew ? 'Enregistrer ' ~ (document.isFacture ? 'la facture' : 'le devis') : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

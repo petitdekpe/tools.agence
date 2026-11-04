@@ -1,0 +1,23 @@
+{% extends 'calendrier/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Planifier une publication' : 'Modifier la publication' }}{% endblock %}
+{% block pub_actions %}<a class="ghost" href="{{ isNew ? path('app_calendrier', {mois: publication.datePublication|date('Y-m')}) : path('app_publication_show', {id: publication.id}) }}">← Retour</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel wide">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.titre) }}
+            {{ form_row(form.client) }}
+            {{ form_row(form.canal) }}
+            {{ form_row(form.format) }}
+            {{ form_row(form.datePublication) }}
+            {{ form_row(form.heure) }}
+            {{ form_row(form.statut) }}
+            {{ form_row(form.responsable) }}
+            {{ form_row(form.contenu) }}
+            {{ form_row(form.lien) }}
+            <button class="btn" type="submit">{{ isNew ? 'Planifier' : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

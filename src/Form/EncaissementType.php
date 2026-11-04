@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Client;
+use App\Entity\Document;
 use App\Entity\Encaissement;
 use App\Service\EncaissementCalculator;
 use App\Service\FiscalSettings;
@@ -62,6 +63,18 @@ class EncaissementType extends AbstractType
                 'label' => 'Nature du paiement',
                 'choices' => array_flip(Encaissement::NATURES),
                 'help' => 'Une avance ou un acompte est taxé comme un paiement de facture : la TVA est due dès l\'encaissement.',
+            ])
+            ->add('facture', EntityType::class, [
+                'label' => 'Facture réglée',
+                'class' => Document::class,
+                'required' => false,
+                'choice_label' => static fn (Document $d): string => $d->getReference().' · '.$d->getClient()?->getName().' · '.number_format((float) $d->getMontantTtc(), 0, '', ' ').' FCFA'.(Document::ANNULEE === $d->getStatut() ? ' (annulée)' : ''),
+                'query_builder' => static fn ($repository) => $repository->createQueryBuilder('d')
+                    ->andWhere('d.type = :type')->andWhere('d.deletedAt IS NULL')->andWhere('d.statut <> :draft')
+                    ->setParameter('type', Document::TYPE_FACTURE)->setParameter('draft', Document::BROUILLON)
+                    ->orderBy('d.dateEmission', 'DESC')->addOrderBy('d.id', 'DESC'),
+                'placeholder' => 'Aucune (paiement sans facture suivie)',
+                'help' => 'Rattache ce paiement à une facture : son reste à encaisser se met à jour dans Factures et devis.',
             ])
             ->add('montantTtc', NumberType::class, $amount('ttc', 'Montant TTC encaissé (FCFA)', ['attr' => ['min' => 1, 'step' => 1, 'inputmode' => 'numeric', 'data-encaissement-form-target' => 'ttc', 'data-action' => 'input->encaissement-form#recalculate']]))
             ->add('retenueTvaSource', CheckboxType::class, [

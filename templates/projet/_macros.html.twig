@@ -1,0 +1,48 @@
+{# Cartes des tableaux Kanban et pastilles de statut. « editable » : la carte se déplace par glisser-déposer. #}
+
+{% macro initials(person) %}{{ (person.firstName|slice(0, 1) ~ person.lastName|slice(0, 1))|upper }}{% endmacro %}
+
+{% macro projet_card(p, editable) %}
+    <article class="kb-card{{ p.late ? ' late' }}" data-id="{{ p.id }}" data-status="{{ p.statut }}"{% if editable %} draggable="true" data-move-url="{{ path('app_projet_move', {id: p.id}) }}" data-action="dragstart->kanban#start dragend->kanban#end"{% endif %}>
+        <a class="kb-title" href="{{ path('app_projet_show', {id: p.id}) }}" draggable="false">{{ p.nom }}</a>
+        <small class="muted">{{ p.client ? p.client.name : 'Projet interne' }}</small>
+        <div class="kb-meta">
+            {% if p.echeance %}<span class="chip {{ p.late ? 'chip-bad' : 'chip-muted' }}" title="Échéance">{{ p.echeance|date('d/m/Y') }}</span>{% endif %}
+            <span class="muted small">{{ p.taches|length }} tâche{{ p.taches|length > 1 ? 's' }}</span>
+            {% if p.responsable %}<span class="kb-avatar" title="{{ p.responsable.fullName }}">{{ _self.initials(p.responsable) }}</span>{% endif %}
+        </div>
+        {% if p.taches|length %}<div class="bar"><div class="bar-fill" style="width: {{ p.progress }}%"></div></div>{% endif %}
+    </article>
+{% endmacro %}
+
+{% macro tache_card(t, editable) %}
+    <article class="kb-card prio-{{ t.priorite }}{{ t.late ? ' late' }}" data-id="{{ t.id }}" data-status="{{ t.statut }}"{% if editable %} draggable="true" data-move-url="{{ path('app_tache_move', {id: t.id}) }}" data-action="dragstart->kanban#start dragend->kanban#end"{% endif %}>
+        {% if editable %}<a class="kb-title" href="{{ path('app_tache_edit', {id: t.id}) }}" draggable="false">{{ t.titre }}</a>{% else %}<span class="kb-title">{{ t.titre }}</span>{% endif %}
+        {% if t.description %}<small class="muted kb-desc">{{ t.description|length > 90 ? t.description|slice(0, 90) ~ '…' : t.description }}</small>{% endif %}
+        <div class="kb-meta">
+            {% if t.priorite == 'haute' %}<span class="chip chip-warn">Haute</span>{% endif %}
+            {% if t.echeance %}<span class="chip {{ t.late ? 'chip-bad' : 'chip-muted' }}" title="Échéance">{{ t.echeance|date('d/m/Y') }}</span>{% endif %}
+            {% if t.assignee %}<span class="kb-avatar" title="{{ t.assignee.fullName }}">{{ _self.initials(t.assignee) }}</span>{% endif %}
+        </div>
+    </article>
+{% endmacro %}
+
+{% macro projet_state(p) %}
+    {%- if p.statut == 'termine' -%}<span class="chip chip-ok">Terminé</span>
+    {%- elseif p.statut == 'annule' -%}<span class="chip chip-muted">Annulé</span>
+    {%- elseif p.late -%}<span class="chip chip-bad">En retard</span>
+    {%- elseif p.statut == 'en_pause' -%}<span class="chip chip-warn">En pause</span>
+    {%- elseif p.statut == 'en_cours' -%}<span class="chip chip-info">En cours</span>
+    {%- else -%}<span class="chip chip-muted">À lancer</span>
+    {%- endif -%}
+{% endmacro %}
+
+{% macro mission_state(m) %}
+    {%- if m.statut == 'realisee' -%}<span class="chip chip-ok">Réalisée</span>
+    {%- elseif m.statut == 'annulee' -%}<span class="chip chip-muted">Annulée</span>
+    {%- elseif m.statut == 'reportee' -%}<span class="chip chip-warn">Reportée</span>
+    {%- elseif m.toClose -%}<span class="chip chip-bad">À clôturer</span>
+    {%- elseif m.statut == 'confirmee' -%}<span class="chip chip-info">Confirmée</span>
+    {%- else -%}<span class="chip chip-muted">Planifiée</span>
+    {%- endif -%}
+{% endmacro %}

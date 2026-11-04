@@ -1,0 +1,24 @@
+{# Filtres communs à la grille et à la liste. « action » : route de la page, « extra » : champs cachés propres à la page. #}
+<form method="get" action="{{ path(action) }}" class="filters enc-filters">
+    {% for name, value in extra|default({}) %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    <input type="search" name="q" value="{{ filter.q }}" placeholder="Titre, texte ou client…" aria-label="Rechercher">
+    <select name="client" aria-label="Client">
+        <option value="">Tous les clients</option>
+        {% for c in clients %}<option value="{{ c.id }}" {{ filter.client == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <select name="canal" aria-label="Canal">
+        <option value="">Tous les canaux</option>
+        {% for key, label in constant('App\\Entity\\Publication::CANAUX') %}<option value="{{ key }}" {{ filter.canal == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="statut" aria-label="Statut">
+        <option value="">Tous les statuts</option>
+        <option value="encours" {{ filter.statut == 'encours' ? 'selected' }}>Pas encore publiées</option>
+        {% for key, label in constant('App\\Entity\\Publication::STATUTS') %}<option value="{{ key }}" {{ filter.statut == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="responsable" aria-label="Responsable">
+        <option value="">Tous les responsables</option>
+        {% for p in people %}<option value="{{ p.id }}" {{ filter.responsable == p.id ? 'selected' }}>{{ p.fullName }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Filtrer</button>
+    {% if filter.isActive %}<a class="ghost" href="{{ path(action, extra|default({})) }}">Réinitialiser</a>{% endif %}
+</form>

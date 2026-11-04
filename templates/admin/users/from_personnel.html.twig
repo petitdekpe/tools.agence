@@ -1,0 +1,20 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}Créer un compte pour {{ person.fullName }}{% endblock %}
+
+{% block page_actions %}<a class="ghost" href="{{ path('app_personnel_show', {id: person.id}) }}">← Retour à la fiche</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        <p class="muted">
+            Un mot de passe temporaire est généré et envoyé par e-mail. Il est valable {{ hours }} h et ne sert qu'à
+            la première connexion, où {{ person.firstName }} activera Google Authenticator.
+        </p>
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.email) }}
+            {{ form_row(form.role) }}
+            <button class="btn" type="submit">Créer le compte et envoyer le mot de passe</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

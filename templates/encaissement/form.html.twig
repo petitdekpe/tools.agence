@@ -25,6 +25,7 @@
                     <small>Client absent de la liste ? <a href="{{ path('app_client_new') }}">Créer le client</a> (vous reviendrez ensuite ici).</small>
                 </div>
                 {{ form_row(form.nature) }}
+                {{ form_row(form.facture) }}
                 {{ form_row(form.montantTtc) }}
                 {{ form_row(form.retenueTvaSource) }}
                 {{ form_row(form.observation) }}

@@ -1,0 +1,8 @@
+{# Logo centré en tête des écrans de connexion (fond noir). #}
+<div class="login-brand">
+    {% if site_settings().logoPath %}
+        <img class="login-logo" src="{{ asset('uploads/' ~ site_settings().logoPath) }}" alt="{{ site_settings().headerTitle }}">
+    {% else %}
+        <span class="login-mark" aria-hidden="true">{{ site_settings().headerTitle|slice(0, 1)|upper }}</span>
+    {% endif %}
+</div>

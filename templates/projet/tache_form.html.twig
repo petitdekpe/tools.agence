@@ -1,0 +1,26 @@
+{% extends 'projet/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouvelle carte' : 'Modifier la carte' }}{% endblock %}
+{% block pm_actions %}<a class="ghost" href="{{ path('app_projet_show', {id: projet.id}) }}">← {{ projet.nom }}</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel wide">
+        {{ form_start(form, {attr: {class: 'form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.titre) }}
+            {{ form_row(form.statut) }}
+            {{ form_row(form.assignee) }}
+            {{ form_row(form.priorite) }}
+            {{ form_row(form.echeance) }}
+            {{ form_row(form.description) }}
+            <button class="btn" type="submit">{{ isNew ? 'Ajouter la carte' : 'Enregistrer les modifications' }}</button>
+        {{ form_end(form) }}
+
+        {% if not isNew %}
+            <form method="post" action="{{ path('app_tache_delete', {id: tache.id}) }}" class="danger-zone" onsubmit="return confirm('Supprimer cette carte ?')">
+                <input type="hidden" name="_token" value="{{ csrf_token('tache_' ~ tache.id) }}">
+                <button class="ghost danger" type="submit">Supprimer cette carte</button>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}
