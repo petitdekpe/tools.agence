@@ -13,6 +13,7 @@ use App\Repository\MaterielRepository;
 use App\Repository\PersonnelRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use App\Service\ChangeSet;
 use App\Service\MaterielAssigner;
 use App\Service\MaterielExporter;
@@ -40,6 +41,7 @@ class MaterielController extends AbstractController
         private readonly PersonnelRepository $personnel,
         private readonly MaterielAssigner $assigner,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -138,6 +140,7 @@ class MaterielController extends AbstractController
             try {
                 $this->assigner->assign($item, $data['personnel'], $data['assignedAt'], $data['note'], $this->currentUser());
                 $this->activity->log('materiel.assign', ['id' => $id, 'materiel' => $item->getDesignation(), 'remis_a' => $data['personnel']->getFullName(), 'date' => $data['assignedAt']->format('d/m/Y')]);
+                $this->notifications->materielAssigned($item, $data['personnel'], $data['assignedAt']);
                 $this->addFlash('success', sprintf('« %s » remis à %s.', $item->getDesignation(), $data['personnel']->getFullName()));
 
                 return $this->redirectToRoute('app_materiel_show', ['id' => $id]);
@@ -164,6 +167,7 @@ class MaterielController extends AbstractController
             try {
                 $this->assigner->giveBack($item, $data['returnedAt'], $data['etat'], $data['note'], $this->currentUser());
                 $this->activity->log('materiel.return', ['id' => $id, 'materiel' => $item->getDesignation(), 'rendu_par' => $holder?->getFullName(), 'date' => $data['returnedAt']->format('d/m/Y'), 'etat' => $data['etat'] ? Materiel::ETATS[$data['etat']] : null]);
+                $this->notifications->materielReturned($item, $holder, $data['returnedAt']);
                 $this->addFlash('success', sprintf('« %s » restitué.', $item->getDesignation()));
 
                 return $this->redirectToRoute('app_materiel_show', ['id' => $id]);

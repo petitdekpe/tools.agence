@@ -1,0 +1,9 @@
+Bonjour {{ user.fullName }},
+
+{{ lines|join("\n\n") }}
+{% if url %}
+
+Ouvrir : {{ url }}
+{% endif %}
+
+Message automatique de {{ siteTitle }}.

@@ -11,6 +11,7 @@ use App\Repository\ClientRepository;
 use App\Repository\DocumentRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use App\Service\DocumentNumbering;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,6 +30,7 @@ class DocumentController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly DocumentRepository $documents,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -158,6 +160,7 @@ class DocumentController extends AbstractController
             $document->setStatut($statut)->touch();
             $this->em->flush();
             $this->activity->log('facture.status', ['id' => $id, 'numero' => $document->getReference(), 'de' => $from, 'vers' => $document->getStatutLabel()]);
+            $this->notifications->documentStatusChanged($document, $from);
             $this->addFlash('success', sprintf('%s : statut « %s ».', $document->getReference(), $document->getStatutLabel()));
         }
 

@@ -17,6 +17,7 @@ use App\Repository\ProjetRepository;
 use App\Repository\TacheRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use App\Service\KanbanOrder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -41,6 +42,7 @@ class ProjetController extends AbstractController
         private readonly ProjetRepository $projets,
         private readonly TacheRepository $taches,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -180,6 +182,7 @@ class ProjetController extends AbstractController
 
         if ($changed) {
             $this->activity->log('projet.status', ['id' => $id, 'nom' => $projet->getNom(), 'de' => $from, 'vers' => $projet->getStatutLabel()]);
+            $this->notifications->projetStatusChanged($projet, $from);
         }
 
         return $this->json(['ok' => true, 'statut' => $projet->getStatut(), 'label' => $projet->getStatutLabel()]);
@@ -225,6 +228,7 @@ class ProjetController extends AbstractController
             $projet->touch();
             $this->em->flush();
             $this->activity->log('tache.create', ['id' => $tache->getId()] + $tache->snapshot());
+            $this->notifications->tacheAssigned($tache);
             $this->addFlash('success', 'Carte ajoutée.');
 
             return $this->redirectToRoute('app_projet_show', ['id' => $projet->getId()]);
@@ -277,6 +281,7 @@ class ProjetController extends AbstractController
 
         if ($changed) {
             $this->activity->log('tache.move', ['id' => $id, 'projet' => $tache->getProjet()->getNom(), 'titre' => $tache->getTitre(), 'de' => $from, 'vers' => $tache->getStatutLabel()]);
+            $this->notifications->tacheMoved($tache, $from);
         }
 
         return $this->json(['ok' => true, 'statut' => $tache->getStatut(), 'label' => $tache->getStatutLabel(), 'progress' => $tache->getProjet()->getProgress()]);

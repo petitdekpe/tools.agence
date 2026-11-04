@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use App\Service\TotpService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +18,7 @@ class TwoFactorController extends AbstractController
     private const SESSION_KEY = 'totp_pending_secret';
 
     #[Route('/2fa/setup', name: 'app_2fa_setup', methods: ['GET', 'POST'])]
-    public function setup(Request $request, TotpService $totp, EntityManagerInterface $em, ActivityLogger $activity): Response
+    public function setup(Request $request, TotpService $totp, EntityManagerInterface $em, ActivityLogger $activity, Notifications $notifications): Response
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -41,6 +42,7 @@ class TwoFactorController extends AbstractController
                 $em->flush();
                 $session->remove(self::SESSION_KEY);
                 $activity->log('auth.2fa_enabled');
+                $notifications->twoFactorEnabled($user);
                 $this->addFlash('success', 'Google Authenticator est activé. Utilisez-le à chaque connexion.');
 
                 return $this->redirectToRoute('app_home');

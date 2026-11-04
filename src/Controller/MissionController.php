@@ -13,6 +13,7 @@ use App\Repository\PersonnelRepository;
 use App\Repository\ProjetRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use App\Service\MissionPlanner;
 use App\Service\MissionReview;
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,6 +37,7 @@ class MissionController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly MissionRepository $missions,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
         private readonly MissionPlanner $planner,
     ) {
     }
@@ -168,6 +170,7 @@ class MissionController extends AbstractController
             $this->em->persist($mission);
             $this->em->flush();
             $this->activity->log('mission.create', ['id' => $mission->getId()] + $mission->snapshot());
+            $this->notifications->missionScheduled($mission);
             $this->addFlash('success', 'Mission programmée.');
             $this->warnOfConflicts($mission);
 
@@ -242,6 +245,7 @@ class MissionController extends AbstractController
             $mission->setStatut($statut)->touch();
             $this->em->flush();
             $this->activity->log('mission.status', ['id' => $id, 'titre' => $mission->getTitre(), 'de' => $from, 'vers' => $mission->getStatutLabel()]);
+            $this->notifications->missionStatusChanged($mission, $from);
             $this->addFlash('success', sprintf('« %s » : %s.', $mission->getTitre(), mb_strtolower($mission->getStatutLabel())));
             $this->warnOfConflicts($mission);
         }
@@ -283,6 +287,7 @@ class MissionController extends AbstractController
         $mission->report($resultat, $compteRendu);
         $this->em->flush();
         $this->activity->log('mission.report', ['id' => $id, 'titre' => $mission->getTitre(), 'resultat' => $mission->getResultatLabel()]);
+        $this->notifications->missionReported($mission);
         $this->addFlash('success', 'Compte rendu enregistré : la mission est réalisée.');
 
         return $this->redirectToRoute('app_mission_show', ['id' => $id]);

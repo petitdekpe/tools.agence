@@ -11,6 +11,7 @@ use App\Repository\PersonnelRepository;
 use App\Repository\PublicationRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,7 @@ class PublicationController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly PublicationRepository $publications,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -191,6 +193,7 @@ class PublicationController extends AbstractController
             $publication->setStatut($statut)->touch();
             $this->em->flush();
             $this->activity->log('publication.status', ['id' => $id, 'titre' => $publication->getTitre(), 'de' => $from, 'vers' => $publication->getStatutLabel()]);
+            $this->notifications->publicationStatusChanged($publication, $from);
             $this->addFlash('success', sprintf('« %s » : %s.', $publication->getTitre(), mb_strtolower($publication->getStatutLabel())));
         }
 

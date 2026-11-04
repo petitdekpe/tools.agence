@@ -10,6 +10,7 @@ use App\Form\TicketType;
 use App\Repository\TicketRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,7 @@ class TicketController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly TicketRepository $tickets,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -87,6 +89,7 @@ class TicketController extends AbstractController
             $this->em->persist($ticket);
             $this->em->flush();
             $this->activity->log('ticket.create', ['id' => $ticket->getId()] + $ticket->snapshot() + ['materiel_passe_en_panne' => $flagged]);
+            $this->notifications->ticketCreated($ticket);
             $this->addFlash('success', sprintf('%s %s enregistré%s.', $ticket->getTypeLabel(), $ticket->getReference(), $ticket->isDemande() ? 'e' : ''));
 
             return $this->redirectToRoute('app_ticket_show', ['id' => $ticket->getId()]);
@@ -179,6 +182,9 @@ class TicketController extends AbstractController
 
         $this->em->flush();
         $this->activity->log('ticket.status', ['id' => $id, 'numero' => $ticket->getReference(), 'de' => $from, 'vers' => $ticket->getStatutLabel(), 'materiel_remis_en_etat' => $restored]);
+        if ($from !== $ticket->getStatutLabel()) {
+            $this->notifications->ticketStatusChanged($ticket, $from);
+        }
         $this->addFlash('success', sprintf('%s : %s.', $ticket->getReference(), mb_strtolower($ticket->getStatutLabel())).($restored ? ' L\'équipement est repassé en bon état.' : ''));
 
         return $this->redirectToRoute('app_ticket_show', ['id' => $id]);

@@ -10,6 +10,7 @@ use App\Repository\RoleRepository;
 use App\Security\Permission;
 use App\Service\AccountProvisioner;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -31,6 +32,7 @@ class UserController extends AbstractController
         private readonly ActivityLogger $activity,
         private readonly RoleRepository $roles,
         private readonly AccountProvisioner $accounts,
+        private readonly Notifications $notifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -129,6 +131,9 @@ class UserController extends AbstractController
                 }
                 $this->em->flush();
                 $this->activity->log('user.update', ['id' => $user->getId(), 'avant' => $before, 'apres' => ['email' => $user->getEmail(), 'nom' => $user->getFullName(), 'role' => $user->getRoleLabel(), 'actif' => $user->isActive()], 'mot_de_passe_change' => (bool) $plain]);
+                if ($before['role'] !== $user->getRoleLabel()) {
+                    $this->notifications->roleChanged($user, $before['role']);
+                }
                 $this->addFlash('success', sprintf('Utilisateur %s mis à jour.', $user->getFullName()));
 
                 return $this->redirectToRoute('app_admin_users');
@@ -150,6 +155,7 @@ class UserController extends AbstractController
             $user->setActive(!$user->isActive());
             $this->em->flush();
             $this->activity->log('user.toggle', ['id' => $user->getId(), 'email' => $user->getEmail(), 'actif' => $user->isActive()]);
+            $this->notifications->accountToggled($user);
             $this->addFlash('success', sprintf('%s : compte %s.', $user->getFullName(), $user->isActive() ? 'réactivé' : 'désactivé'));
         }
 

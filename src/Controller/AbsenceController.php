@@ -11,6 +11,7 @@ use App\Repository\AbsenceRepository;
 use App\Repository\PersonnelRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,6 +34,7 @@ class AbsenceController extends AbstractController
         private readonly AbsenceRepository $absences,
         private readonly PersonnelRepository $personnel,
         private readonly ActivityLogger $activity,
+        private readonly Notifications $notifications,
     ) {
     }
 
@@ -133,6 +135,7 @@ class AbsenceController extends AbstractController
             $this->em->persist($absence);
             $this->em->flush();
             $this->activity->log('absence.create', ['id' => $absence->getId()] + $absence->snapshot());
+            $this->notifications->absenceCreated($absence);
             $this->addFlash('success', $manager ? 'Absence enregistrée.' : 'Demande envoyée : elle sera examinée par la direction.');
 
             return $this->redirectToRoute('app_absence_show', ['id' => $absence->getId()]);
@@ -222,6 +225,7 @@ class AbsenceController extends AbstractController
 
         $this->em->flush();
         $this->activity->log('absence.decision', ['id' => $id, 'personne' => $absence->getPersonnel()?->getFullName(), 'du' => $absence->getDateDebut()?->format('d/m/Y'), 'au' => $absence->getDateFin()?->format('d/m/Y'), 'decision' => $absence->getStatutLabel(), 'note' => $absence->getDecision()]);
+        $this->notifications->absenceDecided($absence);
         $this->addFlash('success', $approve ? 'Absence approuvée.' : 'Demande refusée.');
 
         return $this->redirectToRoute('app_absence_show', ['id' => $id]);
@@ -247,6 +251,7 @@ class AbsenceController extends AbstractController
         $absence->decide(Absence::ANNULEE, $user instanceof User ? $user : null);
         $this->em->flush();
         $this->activity->log('absence.cancel', ['id' => $id] + $absence->snapshot());
+        $this->notifications->absenceCancelled($absence);
         $this->addFlash('success', 'Absence annulée.');
 
         return $this->redirectToRoute('app_absence_show', ['id' => $id]);
