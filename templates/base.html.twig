@@ -2,15 +2,25 @@
 <html lang="fr">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         {% set site = site_settings() %}
         <title>{% block title %}{{ site.headerTitle }}{% endblock %}</title>
-        {% if site.logoPath %}<link rel="icon" href="{{ asset('uploads/' ~ site.logoPath) }}">{% endif %}
+        {# Application installable (PWA) : manifeste, couleurs de la barre système et icône d'écran d'accueil iOS. #}
+        <link rel="manifest" href="{{ path('app_manifest') }}">
+        <meta name="theme-color" content="#ffffff">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="{{ site.headerTitle|slice(0, 12) }}">
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+        {# Fondu entre deux pages (Turbo) : la navigation ressemble à celle d'une application. #}
+        <meta name="view-transition" content="same-origin">
+        {% if site.logoPath %}<link rel="icon" href="{{ asset('uploads/' ~ site.logoPath) }}">{% else %}<link rel="icon" type="image/png" href="/icons/favicon-32.png">{% endif %}
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
     </head>
-    <body class="{% block body_class %}{% endblock %}">
+    <body class="{% block body_class %}{% endblock %}" data-controller="pwa tables">
         {# Coque de l'application : barre du haut, menu latéral et panneau principal. Les pages sans menu (connexion) redéfinissent « layout ». #}
         {% block layout %}
             {% import '_icons.html.twig' as i %}
@@ -38,7 +48,6 @@
 
             <div class="shell" data-controller="shell" data-action="click@window->shell#outside keydown.esc@window->shell#escape">
                 <header class="topbar">
-                    <button type="button" class="icon-btn nav-toggle" data-action="shell#toggleNav" aria-label="Ouvrir le menu">{{ i.icon('menu', 22) }}</button>
                     <a href="{{ path('app_home') }}" class="brand">
                         {% if site.logoPath %}
                             <img class="brand-logo" src="{{ asset('uploads/' ~ site.logoPath) }}" alt="">
@@ -47,6 +56,8 @@
                         {% endif %}
                         <span class="brand-text">{{ site.headerTitle }}</span>
                     </a>
+                    {# Sur mobile, le titre de l'outil en cours remplace le nom du site (voir app.css). #}
+                    <span class="topbar-title">{{ context.title }}</span>
 
                     {% if app.user %}
                         <div class="usermenu">
@@ -65,7 +76,8 @@
                                 {% if is_granted('admin.access') %}
                                     <a class="menu-item" href="{{ path('app_admin') }}">{{ i.icon('dashboard', 18) }}<span>Administration</span></a>
                                 {% endif %}
-                                <a class="menu-item" href="{{ path('app_logout') }}">{{ i.icon('power', 18) }}<span>Déconnexion</span></a>
+                                {{ include('_install_buttons.html.twig', {cls: 'menu-item', size: 18}) }}
+                                <a class="menu-item" href="{{ path('app_logout') }}" data-action="pwa#logout">{{ i.icon('power', 18) }}<span>Déconnexion</span></a>
                             </div>
                         </div>
                     {% endif %}
@@ -121,6 +133,16 @@
                                     {% endfor %}
                                 </div>
                             {% endfor %}
+
+                            {# Raccourcis du compte, utiles surtout sur mobile où le menu latéral sert de menu principal. #}
+                            {% if app.user %}
+                                <div class="nav-group nav-account">
+                                    <span class="nav-title">Mon compte</span>
+                                    <a class="nav-item {{ route starts with 'app_profile' ? 'active' }}" href="{{ path('app_profile') }}">{{ i.icon('user', 20) }}<span>Mon profil</span></a>
+                                    {{ include('_install_buttons.html.twig', {cls: 'nav-item', size: 20}) }}
+                                    <a class="nav-item" href="{{ path('app_logout') }}" data-action="pwa#logout">{{ i.icon('power', 20) }}<span>Déconnexion</span></a>
+                                </div>
+                            {% endif %}
                         </nav>
                     </aside>
                     <div class="scrim" data-action="click->shell#closeNav"></div>
@@ -135,11 +157,35 @@
                                 <span>© {{ 'now'|date('Y') }} {{ site.headerTitle }}</span>
                                 <a href="{{ path('app_home') }}">Accueil</a>
                                 {% if is_granted('admin.access') %}<a href="{{ path('app_admin') }}">Administration</a>{% endif %}
-                                <a class="btn-outline" href="{{ path('app_logout') }}">{{ i.icon('power', 16) }} Déconnexion</a>
+                                <a class="btn-outline" href="{{ path('app_logout') }}" data-action="pwa#logout">{{ i.icon('power', 16) }} Déconnexion</a>
                             </footer>
                         {% endblock %}
                     </main>
                 </div>
+
+                {# Barre d'onglets du bas (mobile) : accueil, menu, création, profil. #}
+                {% if app.user %}
+                    <nav class="tabbar" aria-label="Navigation rapide">
+                        <a class="tab {{ route == 'app_home' ? 'active' }}" href="{{ path('app_home') }}">{{ i.icon('home', 22) }}<span>Accueil</span></a>
+                        <button type="button" class="tab" data-action="shell#toggleNav" aria-label="Ouvrir le menu">{{ i.icon('menu', 22) }}<span>Menu</span></button>
+                        {% if create %}<button type="button" class="tab tab-create" data-action="shell#toggleSheet" aria-haspopup="dialog" aria-label="Créer">{{ i.icon('plus', 24) }}</button>{% endif %}
+                        <a class="tab {{ route starts with 'app_profile' ? 'active' }}" href="{{ path('app_profile') }}">{{ i.icon('user', 22) }}<span>Profil</span></a>
+                    </nav>
+                    {% if create %}
+                        <div class="sheet" data-shell-target="sheet" data-action="click->shell#closeSheetOutside" hidden>
+                            <div class="sheet-panel" role="dialog" aria-label="Créer">
+                                <span class="sheet-grip" aria-hidden="true"></span>
+                                <strong class="sheet-title">Créer</strong>
+                                {% for c in create %}
+                                    <a class="sheet-item" href="{{ path(c.route, c.query|default({})) }}">{{ i.icon(c.icon, 20) }}<span>{{ c.label }}</span></a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {# Hors ligne : on consulte les dernières pages vues, les modifications sont désactivées (voir pwa_controller.js). #}
+                <div class="offline-banner" data-pwa-target="banner" role="status" hidden>Hors ligne : consultation seule. Les modifications reprendront dès le retour du réseau.</div>
             </div>
         {% endblock %}
     </body>

@@ -1,0 +1,4 @@
+{# Installation de l'application : le bouton n'apparaît que si le navigateur la propose (voir pwa_controller.js). #}
+{% import '_icons.html.twig' as i %}
+<button type="button" class="{{ cls }} install-btn" data-pwa-target="install" data-action="pwa#install" hidden>{{ i.icon('download', size) }}<span>Installer l'application</span></button>
+<button type="button" class="{{ cls }} install-btn" data-pwa-target="ios" data-action="pwa#iosHelp" hidden>{{ i.icon('download', size) }}<span>Installer sur l'écran d'accueil</span></button>

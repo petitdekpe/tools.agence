@@ -37,13 +37,13 @@
     </div>
 
     <div class="pgrid-wrap">
-        <div class="pgrid">
+        <div class="pgrid agenda">
             {% for name in dayNames %}<div class="pgrid-head">{{ name }}</div>{% endfor %}
             {% for week in weeks %}
                 {% for day in week %}
                     <div class="pgrid-day{{ day.inMonth ? '' : ' out' }}{{ day.weekend ? ' weekend' }}{{ day.today ? ' today' }}">
                         <div class="pgrid-num">
-                            <span>{{ day.date|date('j') }}</span>
+                            <span data-wd="{{ dayNames[day.date|date('N') - 1] }}">{{ day.date|date('j') }}</span>
                             {% if is_granted('mission.plan') %}<a href="{{ path('app_mission_new', {date: day.date|date('Y-m-d')}) }}" class="pgrid-add" aria-label="Programmer une mission le {{ day.date|date('d/m') }}" title="Programmer une mission">+</a>{% endif %}
                         </div>
                         {% for mission in day.items|slice(0, 3) %}
