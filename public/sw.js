@@ -1,7 +1,7 @@
 /*
  * Service worker de PROCOM Tools : application installable et consultation hors ligne.
  *
- * - Fichiers statiques (/assets, /icons, polices, logo) : cache d'abord. Les fichiers d'/assets portent leur empreinte dans leur nom,
+ * - Fichiers statiques (/assets, /pwa, polices, logo) : cache d'abord. Les fichiers d'/assets portent leur empreinte dans leur nom,
  *   un fichier modifié a donc une autre adresse.
  * - Pages : le réseau d'abord, la dernière copie vue si le réseau manque, puis la page « hors ligne ». Seules les pages
  *   consultées (ou préchargées par l'application une fois connecté) sont disponibles hors ligne.
@@ -10,7 +10,7 @@
  *
  * Changer VERSION invalide les caches.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC = `procom-static-${VERSION}`;
 const PAGES = `procom-pages-${VERSION}`;
 const OFFLINE = '/offline.html';
@@ -26,7 +26,7 @@ const EXPORT = /\.(xlsx|pdf|ics|csv|zip)$/i;
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC)
-            .then((cache) => cache.addAll([OFFLINE, '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png']))
+            .then((cache) => cache.addAll([OFFLINE, '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/apple-touch-icon.png']))
             .then(() => self.skipWaiting()),
     );
 });
@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
 
-    if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+    if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/pwa/')) {
         event.respondWith(cacheFirst(request));
         return;
     }

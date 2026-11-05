@@ -38,7 +38,7 @@ class PwaTest extends AppWebTestCase
     public function testLeServiceWorkerEtLaPageHorsLigneExistent(): void
     {
         self::assertFileExists(self::PUBLIC_DIR.'/offline.html');
-        self::assertFileExists(self::PUBLIC_DIR.'/icons/apple-touch-icon.png');
+        self::assertFileExists(self::PUBLIC_DIR.'/pwa/apple-touch-icon.png');
 
         $sw = (string) file_get_contents(self::PUBLIC_DIR.'/sw.js');
         // Rien de sensible ne doit être gardé hors ligne.
@@ -47,7 +47,7 @@ class PwaTest extends AppWebTestCase
         }
         self::assertStringContainsString("'clear-pages'", $sw);
         // Chaque adresse précachée à l'installation existe.
-        foreach (['/offline.html', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'] as $path) {
+        foreach (['/offline.html', '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/apple-touch-icon.png'] as $path) {
             self::assertFileExists(self::PUBLIC_DIR.$path);
         }
     }
@@ -57,7 +57,7 @@ class PwaTest extends AppWebTestCase
         $crawler = $this->browser->request('GET', '/login');
         self::assertResponseIsSuccessful();
         self::assertSame('/manifest', $crawler->filter('link[rel=manifest]')->attr('href'));
-        self::assertSame('/icons/apple-touch-icon.png', $crawler->filter('link[rel=apple-touch-icon]')->attr('href'));
+        self::assertSame('/pwa/apple-touch-icon.png', $crawler->filter('link[rel=apple-touch-icon]')->attr('href'));
         self::assertStringContainsString('viewport-fit=cover', $crawler->filter('meta[name=viewport]')->attr('content'));
         self::assertSame('pwa tables', $crawler->filter('body')->attr('data-controller'));
     }

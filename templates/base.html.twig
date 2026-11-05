@@ -12,10 +12,15 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="{{ site.headerTitle|slice(0, 12) }}">
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+        <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png">
         {# Fondu entre deux pages (Turbo) : la navigation ressemble à celle d'une application. #}
         <meta name="view-transition" content="same-origin">
-        {% if site.logoPath %}<link rel="icon" href="{{ asset('uploads/' ~ site.logoPath) }}">{% else %}<link rel="icon" type="image/png" href="/icons/favicon-32.png">{% endif %}
+        {# Filet de sécurité : si les assets compilés sont en retard sur les gabarits (asset-map:compile oublié), la barre d'onglets et
+           la feuille « Créer » restent cachées au lieu de s'afficher sans style. :where() a une spécificité nulle : le vrai CSS l'emporte. #}
+        <style>:where(.tabbar, .sheet, .topbar-title) { display: none; }</style>
+        {# Le service worker s'enregistre sans attendre le JavaScript compilé (voir aussi pwa_controller.js, qui s'en sert ensuite). #}
+        <script>if ('serviceWorker' in navigator) { addEventListener('load', function () { navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {}); }); }</script>
+        {% if site.logoPath %}<link rel="icon" href="{{ asset('uploads/' ~ site.logoPath) }}">{% else %}<link rel="icon" type="image/png" href="/pwa/favicon-32.png">{% endif %}
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}

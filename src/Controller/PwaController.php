@@ -29,13 +29,13 @@ class PwaController extends AbstractController
             'background_color' => '#ffffff',
             'theme_color' => '#ffffff',
             'icons' => [
-                ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => '/icons/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => '/pwa/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/pwa/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/pwa/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
             ],
             'shortcuts' => [
-                ['name' => 'Calendrier éditorial', 'url' => '/calendrier', 'icons' => [['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png']]],
-                ['name' => 'Mon profil', 'url' => '/profil', 'icons' => [['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png']]],
+                ['name' => 'Calendrier éditorial', 'url' => '/calendrier', 'icons' => [['src' => '/pwa/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png']]],
+                ['name' => 'Mon profil', 'url' => '/profil', 'icons' => [['src' => '/pwa/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png']]],
             ],
         ], 200, ['Content-Type' => 'application/manifest+json; charset=utf-8']);
         $response->setEncodingOptions(\JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES);

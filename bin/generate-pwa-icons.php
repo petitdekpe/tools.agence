@@ -1,13 +1,14 @@
 <?php
 
 /**
- * Génère les icônes de l'application installable (PWA) dans public/icons : un « P » blanc sur fond noir, avec le point lavande
+ * Génère les icônes de l'application installable (PWA) dans public/pwa : un « P » blanc sur fond noir, avec le point lavande
  * de la charte. À relancer si la marque change : php bin/generate-pwa-icons.php
  */
 
 $root = dirname(__DIR__);
 $font = $root.'/assets/fonts/figtree-700.ttf';
-$out = $root.'/public/icons';
+// Pas « icons » : Apache (alias.conf) sert son propre dossier /icons/ et répondrait 404 à ces fichiers.
+$out = $root.'/public/pwa';
 if (!is_dir($out)) {
     mkdir($out, 0775, true);
 }
