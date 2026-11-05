@@ -3,8 +3,11 @@
 namespace App\Controller\Admin;
 
 use App\Form\SiteSettingType;
+use App\Repository\LinkToolRepository;
+use App\Repository\RoleRepository;
 use App\Service\ActivityLogger;
 use App\Service\SiteSettings;
+use App\Service\ToolCatalog;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -24,6 +27,8 @@ class SettingsController extends AbstractController
         SiteSettings $settings,
         EntityManagerInterface $em,
         ActivityLogger $activity,
+        LinkToolRepository $links,
+        RoleRepository $roles,
         #[Autowire('%kernel.project_dir%/public/uploads')] string $uploadDir,
     ): Response {
         $setting = $settings->get();
@@ -50,6 +55,17 @@ class SettingsController extends AbstractController
             return $this->redirectToRoute('app_admin_settings');
         }
 
-        return $this->render('admin/settings.html.twig', ['form' => $form, 'setting' => $setting]);
+        $roleLabels = [];
+        foreach ($roles->findAllOrdered() as $role) {
+            $roleLabels[$role->getCode()] = $role->getLabel();
+        }
+
+        return $this->render('admin/settings.html.twig', [
+            'form' => $form,
+            'setting' => $setting,
+            'links' => $links->findAllOrdered(),
+            'categories' => ToolCatalog::CATEGORIES,
+            'roleLabels' => $roleLabels,
+        ]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Dto\PersonnelFilter;
 use App\Entity\Affectation;
 use App\Entity\Personnel;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -30,6 +31,13 @@ class PersonnelRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')->andWhere('p.id = :id')->andWhere('p.deletedAt IS NULL')
             ->setParameter('id', $id)->getQuery()->getOneOrNullResult();
+    }
+
+    /** La fiche (non supprimée) rattachée à un compte, s'il y en a une. */
+    public function findForUser(User $user): ?Personnel
+    {
+        return $this->createQueryBuilder('p')->andWhere('p.user = :user')->andWhere('p.deletedAt IS NULL')
+            ->setParameter('user', $user)->setMaxResults(1)->getQuery()->getOneOrNullResult();
     }
 
     /** @return array{0: list<Personnel>, 1: int} */

@@ -1,4 +1,5 @@
 {% extends 'admin/layout.html.twig' %}
+{% import '_icons.html.twig' as i %}
 
 {% block page_title %}Réglages du site{% endblock %}
 
@@ -17,4 +18,64 @@
             <button class="btn" type="submit">Enregistrer</button>
         {{ form_end(form) }}
     </div>
+
+    <section class="choice-group" id="liens">
+        <div class="section-head">
+            <h2>Outils de type lien</h2>
+            <a class="btn" href="{{ path('app_admin_link_new') }}">+ Nouveau lien</a>
+        </div>
+        <p class="muted">Des raccourcis vers des services externes (drive, outil de design, intranet...). Chaque lien apparaît sur l'accueil et dans le menu, pour les rôles que vous choisissez, et s'ouvre dans un nouvel onglet.</p>
+
+        <div class="table-card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Outil</th>
+                        <th>Catégorie</th>
+                        <th>Visible par</th>
+                        <th>Statut</th>
+                        <th class="right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for link in links %}
+                    {% set token = csrf_token('lien_' ~ link.id) %}
+                    <tr>
+                        <td>
+                            <strong>{{ i.icon(link.icon, 16) }} {{ link.title }}</strong>
+                            <small class="block muted">{{ link.url }}</small>
+                        </td>
+                        <td>{{ categories[link.category] ?? categories.autres }}</td>
+                        <td>
+                            {% for code in link.roleCodes %}<span class="chip chip-info">{{ roleLabels[code] ?? code }}</span> {% else %}<span class="muted">Admin seulement</span>{% endfor %}
+                        </td>
+                        <td>{% if link.active %}<span class="chip chip-ok">Actif</span>{% else %}<span class="chip chip-muted">Désactivé</span>{% endif %}</td>
+                        <td class="right">
+                            <div class="row-actions">
+                                <form method="post" action="{{ path('app_admin_link_move', {id: link.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ token }}">
+                                    <input type="hidden" name="sens" value="up">
+                                    <button class="ghost" type="submit" title="Monter" aria-label="Monter {{ link.title }}" {{ loop.first ? 'disabled' }}>↑</button>
+                                </form>
+                                <form method="post" action="{{ path('app_admin_link_move', {id: link.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ token }}">
+                                    <input type="hidden" name="sens" value="down">
+                                    <button class="ghost" type="submit" title="Descendre" aria-label="Descendre {{ link.title }}" {{ loop.last ? 'disabled' }}>↓</button>
+                                </form>
+                                <a class="ghost" href="{{ path('app_admin_link_edit', {id: link.id}) }}">Modifier</a>
+                                <form method="post" action="{{ path('app_admin_link_delete', {id: link.id}) }}"
+                                      onsubmit="return confirm('Supprimer le lien {{ link.title|e('js') }} ?')">
+                                    <input type="hidden" name="_token" value="{{ token }}">
+                                    <button class="ghost danger" type="submit">Supprimer</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="muted">Aucun lien pour l'instant.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% endblock %}

@@ -59,6 +59,20 @@ class PublicationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les publications d'une période pour le flux iCalendar, annulées comprises (le client les barre).
+     *
+     * @return list<Publication>
+     */
+    public function forFeed(\DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        return $this->filtered(new PublicationFilter())
+            ->andWhere('p.datePublication >= :from')->andWhere('p.datePublication <= :to')
+            ->setParameter('from', $from, 'date_immutable')->setParameter('to', $to, 'date_immutable')
+            ->orderBy('p.datePublication', 'ASC')->addOrderBy('p.heure', 'ASC')->addOrderBy('p.id', 'ASC')
+            ->getQuery()->getResult();
+    }
+
+    /**
      * Chiffres clés du calendrier.
      *
      * @return array{toReview: int, thisWeek: int, late: int, publishedThisMonth: int}

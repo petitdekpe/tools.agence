@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\PersonnelRepository;
 use App\Service\Choices;
+use App\Service\Zodiac;
 use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -92,6 +93,53 @@ class Personnel
     #[Assert\Length(max: 5000, maxMessage: '5 000 caractères maximum.')]
     private ?string $notes = null;
 
+    // --- Profil personnel : complété par la personne elle-même depuis sa page profil ---
+
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    #[Assert\LessThan('today', message: 'La date de naissance doit être passée.')]
+    #[Assert\GreaterThan('1900-01-01', message: 'Date invalide.')]
+    private ?\DateTimeImmutable $birthDate = null;
+
+    /** Début de l'aventure avec PROCOM : distinct des dates de contrat, qui ne racontent pas toujours le même parcours. */
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    #[Assert\LessThanOrEqual('today', message: 'Cette date ne peut pas être dans le futur.')]
+    #[Assert\GreaterThan('1990-01-01', message: 'Date invalide.')]
+    private ?\DateTimeImmutable $adventureStartedAt = null;
+
+    /** Indication de lieu (quartier, ville, repère). */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(max: 255, maxMessage: '255 caractères maximum.')]
+    private ?string $residence = null;
+
+    /** Lien Google Maps (ou autre carte) du lieu de résidence. */
+    #[ORM\Column(length: 500, nullable: true)]
+    #[Assert\Length(max: 500, maxMessage: '500 caractères maximum.')]
+    #[Assert\Url(message: 'Lien invalide : il doit commencer par http:// ou https://.', protocols: ['http', 'https'], requireTld: true)]
+    private ?string $residenceMapUrl = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    #[Assert\Email(message: 'E-mail invalide.')]
+    #[Assert\Length(max: 180)]
+    private ?string $personalEmail = null;
+
+    #[ORM\Column(length: 120, nullable: true)]
+    #[Assert\Length(max: 120, maxMessage: '120 caractères maximum.')]
+    private ?string $emergency1Name = null;
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $emergency1Phone = null;
+
+    #[ORM\Column(length: 120, nullable: true)]
+    #[Assert\Length(max: 120, maxMessage: '120 caractères maximum.')]
+    private ?string $emergency2Name = null;
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $emergency2Phone = null;
+
+    /** @var array<string, string> réseau (SOCIALS) => adresse du profil ou @identifiant */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $socials = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -101,9 +149,30 @@ class Personnel
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $deletedAt = null;
 
+    /** Réseaux sociaux proposés : clé => [libellé, adresse de base pour un simple @identifiant]. */
+    public const SOCIALS = [
+        'facebook' => ['Facebook', 'https://www.facebook.com/'],
+        'instagram' => ['Instagram', 'https://www.instagram.com/'],
+        'twitter' => ['X (Twitter)', 'https://x.com/'],
+        'tiktok' => ['TikTok', 'https://www.tiktok.com/@'],
+        'linkedin' => ['LinkedIn', 'https://www.linkedin.com/in/'],
+    ];
+
     public function __construct()
     {
         $this->createdAt = $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    #[Assert\Callback]
+    public function validateProfile(ExecutionContextInterface $context): void
+    {
+        foreach ($this->socials ?? [] as $key => $value) {
+            if (mb_strlen((string) $value) > 255) {
+                $context->buildViolation('255 caractères maximum.')->atPath('socials['.$key.']')->addViolation();
+            } elseif (preg_match('#^[a-z][a-z0-9+.-]*:#i', (string) $value) && !preg_match('#^https?://#i', (string) $value)) {
+                $context->buildViolation('Adresse invalide : utilisez un lien http(s):// ou votre @identifiant.')->atPath('socials['.$key.']')->addViolation();
+            }
+        }
     }
 
     #[Assert\Callback]
@@ -290,6 +359,197 @@ class Personnel
         $this->notes = self::blankToNull($notes);
 
         return $this;
+    }
+
+    public function getBirthDate(): ?\DateTimeImmutable
+    {
+        return $this->birthDate;
+    }
+
+    public function setBirthDate(?\DateTimeImmutable $birthDate): static
+    {
+        $this->birthDate = $birthDate;
+
+        return $this;
+    }
+
+    /** Signe du zodiaque, déduit de la date de naissance (jamais saisi). @return array{key: string, label: string, symbol: string}|null */
+    public function getZodiac(): ?array
+    {
+        return $this->birthDate ? Zodiac::of($this->birthDate) : null;
+    }
+
+    public function getAdventureStartedAt(): ?\DateTimeImmutable
+    {
+        return $this->adventureStartedAt;
+    }
+
+    public function setAdventureStartedAt(?\DateTimeImmutable $adventureStartedAt): static
+    {
+        $this->adventureStartedAt = $adventureStartedAt;
+
+        return $this;
+    }
+
+    public function getResidence(): ?string
+    {
+        return $this->residence;
+    }
+
+    public function setResidence(?string $residence): static
+    {
+        $this->residence = self::blankToNull($residence);
+
+        return $this;
+    }
+
+    public function getResidenceMapUrl(): ?string
+    {
+        return $this->residenceMapUrl;
+    }
+
+    public function setResidenceMapUrl(?string $residenceMapUrl): static
+    {
+        $this->residenceMapUrl = self::blankToNull($residenceMapUrl);
+
+        return $this;
+    }
+
+    /** Le lien Maps saisi ; à défaut, une recherche Google Maps sur l'indication de lieu. */
+    public function getMapsLink(): ?string
+    {
+        if ($this->residenceMapUrl) {
+            return $this->residenceMapUrl;
+        }
+
+        return $this->residence ? 'https://www.google.com/maps/search/?api=1&query='.rawurlencode($this->residence) : null;
+    }
+
+    public function getPersonalEmail(): ?string
+    {
+        return $this->personalEmail;
+    }
+
+    public function setPersonalEmail(?string $personalEmail): static
+    {
+        $personalEmail = self::blankToNull($personalEmail);
+        $this->personalEmail = null === $personalEmail ? null : mb_strtolower($personalEmail);
+
+        return $this;
+    }
+
+    public function getEmergency1Name(): ?string
+    {
+        return $this->emergency1Name;
+    }
+
+    public function setEmergency1Name(?string $name): static
+    {
+        $this->emergency1Name = self::blankToNull($name);
+
+        return $this;
+    }
+
+    public function getEmergency1Phone(): ?string
+    {
+        return $this->emergency1Phone;
+    }
+
+    public function setEmergency1Phone(?string $phone): static
+    {
+        $this->emergency1Phone = self::blankToNull($phone);
+
+        return $this;
+    }
+
+    public function getEmergency2Name(): ?string
+    {
+        return $this->emergency2Name;
+    }
+
+    public function setEmergency2Name(?string $name): static
+    {
+        $this->emergency2Name = self::blankToNull($name);
+
+        return $this;
+    }
+
+    public function getEmergency2Phone(): ?string
+    {
+        return $this->emergency2Phone;
+    }
+
+    public function setEmergency2Phone(?string $phone): static
+    {
+        $this->emergency2Phone = self::blankToNull($phone);
+
+        return $this;
+    }
+
+    /** @return list<array{name: string, phone: ?string}> les personnes à contacter renseignées, dans l'ordre */
+    public function getEmergencyContacts(): array
+    {
+        $contacts = [];
+        foreach ([[$this->emergency1Name, $this->emergency1Phone], [$this->emergency2Name, $this->emergency2Phone]] as [$name, $phone]) {
+            if ($name || $phone) {
+                $contacts[] = ['name' => $name ?? '', 'phone' => $phone];
+            }
+        }
+
+        return $contacts;
+    }
+
+    /** @return array<string, string> */
+    public function getSocials(): array
+    {
+        return $this->socials ?? [];
+    }
+
+    /** @param array<string, mixed>|null $socials seuls les réseaux connus et non vides sont gardés */
+    public function setSocials(?array $socials): static
+    {
+        $clean = [];
+        foreach (self::SOCIALS as $key => $_) {
+            $value = trim((string) ($socials[$key] ?? ''));
+            if ('' !== $value) {
+                $clean[$key] = $value;
+            }
+        }
+        $this->socials = $clean ?: null;
+
+        return $this;
+    }
+
+    /** @return list<array{key: string, label: string, value: string, url: string}> les réseaux renseignés, avec une adresse cliquable */
+    public function getSocialLinks(): array
+    {
+        $links = [];
+        foreach (self::SOCIALS as $key => [$label, $base]) {
+            $value = $this->getSocials()[$key] ?? null;
+            if (null === $value) {
+                continue;
+            }
+            $url = preg_match('#^https?://#i', $value) ? $value : $base.ltrim($value, '@/');
+            $links[] = ['key' => $key, 'label' => $label, 'value' => $value, 'url' => $url];
+        }
+
+        return $links;
+    }
+
+    /** Les champs du profil qui peuvent changer, pour savoir lesquels la personne a modifiés (sans en recopier le contenu). */
+    public function profileSnapshot(): array
+    {
+        return [
+            'telephone' => $this->phone,
+            'naissance' => $this->birthDate?->format('Y-m-d'),
+            'debut_aventure' => $this->adventureStartedAt?->format('Y-m-d'),
+            'residence' => $this->residence,
+            'lien_maps' => $this->residenceMapUrl,
+            'email_personnel' => $this->personalEmail,
+            'urgence_1' => [$this->emergency1Name, $this->emergency1Phone],
+            'urgence_2' => [$this->emergency2Name, $this->emergency2Phone],
+            'reseaux' => $this->getSocials(),
+        ];
     }
 
     public function getCreatedAt(): \DateTimeImmutable

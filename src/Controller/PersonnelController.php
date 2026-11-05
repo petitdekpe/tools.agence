@@ -8,6 +8,7 @@ use App\Entity\Personnel;
 use App\Entity\User;
 use App\Form\PersonnelType;
 use App\Repository\MaterielRepository;
+use App\Repository\PersonnelDocumentRepository;
 use App\Repository\PersonnelRepository;
 use App\Repository\RoleRepository;
 use App\Security\Permission;
@@ -119,13 +120,17 @@ class PersonnelController extends AbstractController
 
     #[IsGranted(Permission::PERSONNEL_VIEW)]
     #[Route('/{id}', name: 'app_personnel_show', methods: 'GET', requirements: ['id' => '\d+'])]
-    public function show(int $id, MaterielRepository $materiel): Response
+    public function show(int $id, MaterielRepository $materiel, PersonnelDocumentRepository $documents): Response
     {
         $person = $this->findOr404($id);
         $canSeeMateriel = $this->isGranted(Permission::MATERIEL_VIEW);
+        // Adresse, contacts d'urgence, e-mail personnel et pièces d'identité : réservés à ceux qui gèrent les fiches.
+        $canSeeProfile = $this->isGranted(Permission::PERSONNEL_EDIT);
 
         return $this->render('personnel/show.html.twig', [
             'person' => $person,
+            'canSeeProfile' => $canSeeProfile,
+            'documents' => $canSeeProfile ? $documents->byKind($person) : [],
             'canSeeMateriel' => $canSeeMateriel,
             'held' => $canSeeMateriel ? $materiel->heldBy($person) : [],
             'history' => $canSeeMateriel ? $this->em->getRepository(Affectation::class)->findBy(['personnel' => $person], ['assignedAt' => 'DESC', 'id' => 'DESC']) : [],

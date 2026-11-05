@@ -2,10 +2,17 @@
 
 namespace App\Service;
 
+use App\Entity\LinkTool;
+use App\Entity\User;
+use App\Repository\LinkToolRepository;
 use App\Security\Permission;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-/** Liste des outils affichés sur la page d'accueil (tuiles) et dans le menu latéral. */
+/**
+ * Liste des outils affichés sur la page d'accueil (tuiles) et dans le menu latéral : les outils de l'application,
+ * puis les outils de type lien créés dans les réglages du site.
+ */
 class ToolCatalog
 {
     /**
@@ -16,20 +23,41 @@ class ToolCatalog
         'rh_finance' => 'RH et finance',
         'materiel' => 'Matériel',
         'strategie' => 'Stratégie',
+        'autres' => 'Autres outils',
     ];
 
-    public function __construct(private readonly AuthorizationCheckerInterface $auth)
-    {
+    /** @var list<LinkTool>|null les liens actifs, lus une seule fois par requête */
+    private ?array $links = null;
+
+    public function __construct(
+        private readonly AuthorizationCheckerInterface $auth,
+        private readonly Security $security,
+        private readonly LinkToolRepository $linkTools,
+    ) {
     }
 
     /**
-     * Un outil soumis à une permission n'apparaît que pour ceux qui l'ont.
+     * Un outil soumis à une permission n'apparaît que pour ceux qui l'ont ; un lien, que pour les rôles choisis (et l'admin).
      *
-     * @return list<array{title: string, description: string, route: string, category: string, icon: string, color: string, badge: string, match: list<string>, external?: bool, permission?: string}>
+     * @return list<array{title: string, description: string, route: string, category: string, icon: string, color: string, badge: string, match: list<string>, external?: bool, permission?: string, params?: array<string, int>}>
      */
     public function granted(): array
     {
-        return array_values(array_filter($this->all(), fn (array $tool): bool => !isset($tool['permission']) || $this->auth->isGranted($tool['permission'])));
+        $tools = array_filter($this->all(), fn (array $tool): bool => !isset($tool['permission']) || $this->auth->isGranted($tool['permission']));
+        $links = array_map($this->linkTile(...), array_filter($this->activeLinks(), $this->canOpen(...)));
+
+        return array_values([...$tools, ...$links]);
+    }
+
+    /** Un lien actif est ouvert par l'admin et par les utilisateurs dont le rôle a été coché. */
+    public function canOpen(LinkTool $link): bool
+    {
+        $user = $this->security->getUser();
+        if (!$link->isActive() || !$user instanceof User) {
+            return false;
+        }
+
+        return $user->isAdmin() || \in_array($user->getRole()?->getCode(), $link->getRoleCodes(), true);
     }
 
     /**
@@ -50,6 +78,29 @@ class ToolCatalog
         }
 
         return $groups;
+    }
+
+    /** @return list<LinkTool> */
+    private function activeLinks(): array
+    {
+        return $this->links ??= array_values(array_filter($this->linkTools->findAllOrdered(), static fn (LinkTool $link): bool => $link->isActive()));
+    }
+
+    /** La tuile d'un lien : elle passe par la passerelle /liens/{id}, qui vérifie les droits et trace l'ouverture. */
+    private function linkTile(LinkTool $link): array
+    {
+        return [
+            'title' => $link->getTitle(),
+            'description' => $link->getDescription() ?? '',
+            'route' => 'app_lien',
+            'params' => ['id' => $link->getId()],
+            'category' => \array_key_exists($link->getCategory(), self::CATEGORIES) ? $link->getCategory() : 'autres',
+            'match' => [],
+            'icon' => $link->getIcon(),
+            'color' => 'blue',
+            'badge' => $link->getBadge() ?? 'Lien',
+            'external' => true,
+        ];
     }
 
     /** @return list<array{title: string, description: string, route: string, category: string, icon: string, color: string, badge: string, match: list<string>, external?: bool, permission?: string}> */

@@ -45,6 +45,40 @@
                 <div><dt>Départ</dt><dd>{{ person.leftAt ? person.leftAt|date('d/m/Y') : '—' }}</dd></div>
             </dl>
         </section>
+        {% if canSeeProfile %}
+            <section class="panel">
+                <h2>Profil personnel</h2>
+                <p class="muted">Complété par la personne depuis sa page profil.</p>
+                <dl class="facts">
+                    <div><dt>Naissance</dt><dd>{% if person.birthDate %}{{ person.birthDate|date('d/m/Y') }}{% if person.zodiac %} · <span class="zodiac">{{ person.zodiac.symbol }} {{ person.zodiac.label }}</span>{% endif %}{% else %}—{% endif %}</dd></div>
+                    <div><dt>Début de l'aventure</dt><dd>{{ person.adventureStartedAt ? person.adventureStartedAt|date('d/m/Y') : '—' }}</dd></div>
+                    <div><dt>Résidence</dt><dd>{% if person.residence or person.mapsLink %}{{ person.residence }} {% if person.mapsLink %}<a href="{{ person.mapsLink }}" target="_blank" rel="noopener noreferrer">Voir sur la carte</a>{% endif %}{% else %}—{% endif %}</dd></div>
+                    <div><dt>E-mail personnel</dt><dd>{% if person.personalEmail %}<a href="mailto:{{ person.personalEmail }}">{{ person.personalEmail }}</a>{% else %}—{% endif %}</dd></div>
+                    {% for contact in person.emergencyContacts %}
+                        <div><dt>Urgence {{ loop.index }}</dt><dd>{{ contact.name ?: '—' }}{% if contact.phone %} · <a href="tel:{{ contact.phone|replace({' ': ''}) }}">{{ contact.phone }}</a>{% endif %}</dd></div>
+                    {% else %}
+                        <div><dt>Urgence</dt><dd>—</dd></div>
+                    {% endfor %}
+                    <div><dt>Réseaux sociaux</dt><dd>{% for link in person.socialLinks %}<a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>{{ loop.last ? '' : ' · ' }}{% else %}—{% endfor %}</dd></div>
+                </dl>
+            </section>
+            <section class="panel">
+                <h2>Documents et photos</h2>
+                <dl class="facts">
+                    {% for kind in ['identity', 'cv', 'diploma'] %}
+                        {% set doc = documents[kind][0]|default(null) %}
+                        <div><dt>{{ constant('App\\Entity\\PersonnelDocument::KINDS')[kind] }}</dt><dd>{% if doc %}<a href="{{ path('app_personnel_document', {id: doc.id}) }}" target="_blank" rel="noopener">{{ doc.originalName }}</a>{% else %}—{% endif %}</dd></div>
+                    {% endfor %}
+                </dl>
+                {% if documents.photo|default([]) %}
+                    <div class="photo-grid">
+                        {% for photo in documents.photo %}
+                            <figure><a href="{{ path('app_personnel_document', {id: photo.id}) }}" target="_blank" rel="noopener"><img src="{{ path('app_personnel_document', {id: photo.id}) }}" alt="Photo {{ loop.index }}" loading="lazy"></a></figure>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
         {% if person.notes %}
             <section class="panel">
                 <h2>Notes</h2>

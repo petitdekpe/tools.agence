@@ -30,7 +30,7 @@
             <div class="card-head"><h2>Vos outils</h2></div>
             <div class="rows cards">
                 {% for tool in tools %}
-                    <a class="row-link" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
+                    <a class="row-link" href="{{ path(tool.route, tool.params|default({})) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
                         <span class="row-icon">{{ i.icon(tool.icon, 22) }}</span>
                         <span class="row-text">
                             <small>{{ tool.badge }}</small>

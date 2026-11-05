@@ -79,6 +79,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $recoveryTokenExpiresAt = null;
 
+    /** Jeton secret de l'adresse d'abonnement au calendrier éditorial (iCal, Google Agenda) ; null : abonnement désactivé. */
+    #[ORM\Column(length: 64, nullable: true, unique: true)]
+    private ?string $calendarToken = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -149,6 +153,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, Equatab
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function getCalendarToken(): ?string
+    {
+        return $this->calendarToken;
+    }
+
+    public function setCalendarToken(?string $calendarToken): static
+    {
+        $this->calendarToken = $calendarToken;
 
         return $this;
     }

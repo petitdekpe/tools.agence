@@ -1,0 +1,35 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}{{ isNew ? 'Nouveau lien' : 'Modifier le lien ' ~ link.title }}{% endblock %}
+
+{% block page_actions %}<a class="ghost" href="{{ path('app_admin_settings') }}#liens">← Retour aux réglages</a>{% endblock %}
+
+{% block content %}
+    <div class="panel form-panel">
+        {{ form_start(form, {attr: {class: 'form'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.title) }}
+            {{ form_row(form.url) }}
+            {{ form_row(form.description) }}
+            {{ form_row(form.category) }}
+            {{ form_row(form.icon) }}
+            {{ form_row(form.badge) }}
+
+            <fieldset class="perm-box">
+                <legend>{{ form.roleCodes.vars.label }}</legend>
+                {% for choice in form.roleCodes %}
+                    <label class="perm-line">
+                        {{ form_widget(choice) }}
+                        <span>{{ choice.vars.label }}</span>
+                    </label>
+                {% endfor %}
+                {{ form_errors(form.roleCodes) }}
+                <small class="muted">{{ form.roleCodes.vars.help }}</small>
+            </fieldset>
+            {% do form.roleCodes.setRendered %}
+
+            {{ form_row(form.active) }}
+            <button class="btn" type="submit">{{ isNew ? 'Ajouter le lien' : 'Enregistrer' }}</button>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

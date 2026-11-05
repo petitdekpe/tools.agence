@@ -1,0 +1,56 @@
+{% extends 'calendrier/layout.html.twig' %}
+
+{% block pub_actions %}{% endblock %}
+
+{% block content %}
+    <div class="detail">
+        <section class="panel">
+            <h2>Abonner mon agenda</h2>
+            <p>Le calendrier éditorial se met à jour tout seul dans Google Agenda, Apple Calendrier ou Outlook : chaque publication planifiée, déplacée ou annulée y apparaît sans rien exporter à la main.</p>
+
+            {% if feedUrl %}
+                <div class="sync-url">
+                    <input type="text" readonly id="feed-url" value="{{ feedUrl }}" aria-label="Adresse d'abonnement" onclick="this.select()">
+                    <button class="ghost" type="button" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value).then(() => { this.textContent = 'Copiée'; })">Copier</button>
+                </div>
+                <div class="sync-actions">
+                    <a class="btn" href="{{ googleUrl }}" target="_blank" rel="noopener noreferrer">Ajouter à Google Agenda</a>
+                    <a class="btn-outline" href="{{ webcalUrl }}">Ajouter à Apple Calendrier / Outlook</a>
+                </div>
+                {% if local %}
+                    <div class="banner warn"><span>Cette adresse pointe vers un serveur local : Google Agenda ne pourra pas la lire. Elle fonctionnera une fois le site en ligne.</span></div>
+                {% endif %}
+
+                <h3>Comment ça marche</h3>
+                <ol class="sync-steps">
+                    <li><strong>Google Agenda :</strong> le bouton ci-dessus ouvre la page d'abonnement. Sinon, dans Google Agenda : Autres agendas, <em>À partir de l'URL</em>, puis collez l'adresse.</li>
+                    <li><strong>Apple Calendrier / Outlook :</strong> le deuxième bouton ouvre l'abonnement dans l'application. Sinon, ajoutez un agenda par abonnement avec l'adresse.</li>
+                    <li>Les publications sont mises à jour par votre agenda, toutes les heures environ pour Apple et Outlook. Google peut mettre plusieurs heures à les rafraîchir.</li>
+                    <li>Sont envoyées les publications de 60 jours en arrière jusqu'à un an en avant, avec leur statut, leur canal et le lien vers la fiche.</li>
+                </ol>
+
+                <div class="banner warn">
+                    <span><strong>Cette adresse est personnelle et secrète</strong> : quiconque la possède lit le calendrier. Ne la partagez pas. Si elle a fuité, créez-en une nouvelle (l'ancienne cesse de fonctionner).</span>
+                </div>
+                <div class="row-actions">
+                    <form method="post" action="{{ path('app_calendrier_sync_update') }}" onsubmit="return confirm('Créer une nouvelle adresse ? Vous devrez la remettre dans vos agendas.')">
+                        <input type="hidden" name="_token" value="{{ csrf_token('calendrier_sync') }}">
+                        <input type="hidden" name="action" value="regenerate">
+                        <button class="ghost" type="submit">Créer une nouvelle adresse</button>
+                    </form>
+                    <form method="post" action="{{ path('app_calendrier_sync_update') }}" onsubmit="return confirm('Désactiver l\'abonnement ? Vos agendas cesseront de se mettre à jour.')">
+                        <input type="hidden" name="_token" value="{{ csrf_token('calendrier_sync') }}">
+                        <input type="hidden" name="action" value="revoke">
+                        <button class="ghost danger" type="submit">Désactiver l'abonnement</button>
+                    </form>
+                </div>
+            {% else %}
+                <form method="post" action="{{ path('app_calendrier_sync_update') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('calendrier_sync') }}">
+                    <input type="hidden" name="action" value="generate">
+                    <button class="btn" type="submit">Activer mon abonnement</button>
+                </form>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

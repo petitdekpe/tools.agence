@@ -1,0 +1,130 @@
+{% extends 'layout/page.html.twig' %}
+{% import '_icons.html.twig' as i %}
+
+{% block page_title %}Mon profil{% endblock %}
+
+{% block content %}
+    {% set photos = documents.photo|default([]) %}
+    <section class="panel profile-head">
+        {% if photos %}
+            <img class="avatar-xl" src="{{ path('app_personnel_document', {id: photos[0].id}) }}" alt="">
+        {% else %}
+            <span class="avatar-xl">{{ app.user.fullName|slice(0, 1)|upper }}</span>
+        {% endif %}
+        <div class="profile-id">
+            <h2>{{ app.user.fullName }}</h2>
+            <p class="muted">{{ app.user.email }} · <span class="role">{{ app.user.roleLabel }}</span></p>
+            <p class="muted">
+                {% if app.user.lastLoginAt %}Dernière connexion le {{ app.user.lastLoginAt|date('d/m/Y à H:i') }} · {% endif %}
+                Compte créé le {{ app.user.createdAt|date('d/m/Y') }}
+                {% if person and person.zodiac %} · <span class="zodiac" title="Signe astrologique">{{ person.zodiac.symbol }} {{ person.zodiac.label }}</span>{% endif %}
+            </p>
+        </div>
+    </section>
+
+    {% if not person %}
+        <div class="banner warn">
+            <span>Aucune fiche du personnel n'est rattachée à votre compte, il n'y a donc rien à compléter ici. Demandez aux RH de rattacher votre compte à votre fiche.</span>
+        </div>
+    {% else %}
+        {% if missing %}
+            <div class="banner warn profile-missing">
+                <span><strong>Votre profil est complet à {{ completion }} %.</strong> Il manque : {{ missing|join(', ') }}.</span>
+            </div>
+        {% else %}
+            <div class="banner ok"><span><strong>Votre profil est complet.</strong> Merci !</span></div>
+        {% endif %}
+
+        <div class="detail">
+            <section class="panel">
+                <h2>Ma fiche</h2>
+                <p class="muted">Ces informations sont gérées par les RH.</p>
+                <dl class="facts">
+                    <div><dt>Poste</dt><dd>{{ person.jobTitle ?: '—' }}</dd></div>
+                    <div><dt>Service</dt><dd>{{ person.department ?: '—' }}</dd></div>
+                    <div><dt>Contrat</dt><dd>{{ person.contractLabel }}</dd></div>
+                    <div><dt>Entrée</dt><dd>{{ person.hiredAt|date('d/m/Y') }}</dd></div>
+                    {% if person.contractEnd %}<div><dt>Fin du contrat</dt><dd>{{ person.contractEnd|date('d/m/Y') }}</dd></div>{% endif %}
+                </dl>
+            </section>
+        </div>
+
+        {{ form_start(form, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            <div class="enc-grid">
+                <section class="panel">
+                    <h2>Coordonnées</h2>
+                    {{ form_row(form.phone) }}
+                    {{ form_row(form.personalEmail) }}
+                    {{ form_row(form.residence) }}
+                    {{ form_row(form.residenceMapUrl) }}
+                    {% if person.mapsLink %}<p class="muted"><a href="{{ person.mapsLink }}" target="_blank" rel="noopener noreferrer">{{ i.icon('pin', 16) }} Voir sur la carte</a></p>{% endif %}
+                </section>
+
+                <section class="panel">
+                    <h2>Dates</h2>
+                    {{ form_row(form.birthDate) }}
+                    {% if person.zodiac %}<p class="muted">Signe astrologique : <strong class="zodiac">{{ person.zodiac.symbol }} {{ person.zodiac.label }}</strong></p>{% endif %}
+                    {{ form_row(form.adventureStartedAt) }}
+                </section>
+
+                <section class="panel">
+                    <h2>Personnes à contacter en cas d'urgence</h2>
+                    {{ form_row(form.emergency1Name) }}
+                    {{ form_row(form.emergency1Phone) }}
+                    {{ form_row(form.emergency2Name) }}
+                    {{ form_row(form.emergency2Phone) }}
+                </section>
+
+                <section class="panel">
+                    <h2>Réseaux sociaux</h2>
+                    {% for key, network in constant('App\\Entity\\Personnel::SOCIALS') %}{{ form_row(attribute(form, 'social_' ~ key)) }}{% endfor %}
+                </section>
+
+                <section class="panel">
+                    <h2>Documents</h2>
+                    {% for kind, field in {identity: form.identity, cv: form.cv, diploma: form.diploma} %}
+                        {% set doc = documents[kind][0]|default(null) %}
+                        {% if doc %}
+                            <p class="doc-line">
+                                <a href="{{ path('app_personnel_document', {id: doc.id}) }}" target="_blank" rel="noopener">{{ i.icon('invoice', 16) }} {{ doc.kindLabel }} : {{ doc.originalName }}</a>
+                                <small class="muted">({{ (doc.size / 1024)|round }} Ko)</small>
+                                <button class="ghost danger" type="submit" form="delete-{{ doc.id }}">Supprimer</button>
+                            </p>
+                        {% endif %}
+                        {% if doc %}{{ form_row(field, {label: 'Remplacer : ' ~ kinds[kind]|lower}) }}{% else %}{{ form_row(field) }}{% endif %}
+                    {% endfor %}
+                </section>
+
+                <section class="panel">
+                    <h2>Photos ({{ photos|length }}/4)</h2>
+                    {% if photos %}
+                        <div class="photo-grid">
+                            {% for photo in photos %}
+                                <figure>
+                                    <a href="{{ path('app_personnel_document', {id: photo.id}) }}" target="_blank" rel="noopener"><img src="{{ path('app_personnel_document', {id: photo.id}) }}" alt="Photo {{ loop.index }}" loading="lazy"></a>
+                                    <button class="ghost danger" type="submit" form="delete-{{ photo.id }}">Supprimer</button>
+                                </figure>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if photos|length < 4 %}
+                        {{ form_row(form.photos) }}
+                    {% else %}
+                        {{ form_errors(form.photos) }}
+                        {% do form.photos.setRendered %}
+                        <p class="muted">Vous avez atteint les 4 photos : supprimez-en une pour en ajouter.</p>
+                    {% endif %}
+                </section>
+            </div>
+            <button class="btn" type="submit">Enregistrer mon profil</button>
+        {{ form_end(form) }}
+
+        {# Formulaires de suppression hors du formulaire principal (on ne peut pas imbriquer des formulaires) : les boutons s'y rattachent par « form ». #}
+        {% for list in documents %}{% for doc in list %}
+            <form id="delete-{{ doc.id }}" method="post" action="{{ path('app_profile_document_delete', {id: doc.id}) }}" onsubmit="return confirm('Supprimer ce fichier ?')">
+                <input type="hidden" name="_token" value="{{ csrf_token('document_' ~ doc.id) }}">
+            </form>
+        {% endfor %}{% endfor %}
+    {% endif %}
+{% endblock %}

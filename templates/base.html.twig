@@ -52,14 +52,15 @@
                         <div class="usermenu">
                             <button type="button" class="avatar-btn" data-shell-target="menuButton" data-action="shell#toggleMenu" aria-haspopup="true" aria-expanded="false" aria-label="Mon compte">{{ app.user.fullName|slice(0, 1)|upper }}</button>
                             <div class="menu" data-shell-target="menuPanel" hidden>
-                                <div class="menu-head">
+                                <a class="menu-head" href="{{ path('app_profile') }}" title="Voir mon profil">
                                     <span class="avatar-circle lg">{{ app.user.fullName|slice(0, 1)|upper }}</span>
                                     <div>
                                         <strong>{{ app.user.fullName }}</strong>
                                         <small>{{ app.user.email }}</small>
                                         <span class="role">{{ app.user.roleLabel }}</span>
                                     </div>
-                                </div>
+                                </a>
+                                <a class="menu-item" href="{{ path('app_profile') }}">{{ i.icon('user', 18) }}<span>Mon profil</span></a>
                                 <a class="menu-item" href="{{ path('app_home') }}">{{ i.icon('home', 18) }}<span>Accueil</span></a>
                                 {% if is_granted('admin.access') %}
                                     <a class="menu-item" href="{{ path('app_admin') }}">{{ i.icon('dashboard', 18) }}<span>Administration</span></a>
@@ -113,7 +114,7 @@
                                     {% for tool in group.tools %}
                                         {% set on = false %}
                                         {% for prefix in tool.match %}{% if route starts with prefix %}{% set on = true %}{% endif %}{% endfor %}
-                                        <a class="nav-item {{ on ? 'active' }}" href="{{ path(tool.route) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
+                                        <a class="nav-item {{ on ? 'active' }}" href="{{ path(tool.route, tool.params|default({})) }}"{% if tool.external|default(false) %} target="_blank" rel="noopener"{% endif %}>
                                             {{ i.icon(tool.icon, 20) }}<span>{{ tool.title }}</span>
                                             {% if tool.external|default(false) %}<span class="nav-ext">{{ i.icon('external', 14) }}</span>{% endif %}
                                         </a>

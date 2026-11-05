@@ -103,6 +103,8 @@ h1, h2, h3 { letter-spacing: -.03em; }
 .menu-head strong { font-size: 1.05rem; letter-spacing: -.02em; }
 .menu-head small { color: var(--muted); overflow-wrap: anywhere; }
 .menu-head .role { margin-top: 6px; }
+a.menu-head { color: inherit; text-decoration: none; border-radius: var(--r); }
+a.menu-head:hover { background: var(--soft); }
 .menu-item { display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 500; }
 .menu-item:hover { background: var(--soft); }
 
@@ -796,6 +798,29 @@ a.kb-title:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* Listes de choix (administration) */
 .choice-group { margin-top: 24px; }
 .choice-group h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.choice-group .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.choice-group .section-head h2 { margin: 0; }
+.choice-group .table .ico { vertical-align: -3px; margin-right: 4px; }
+
+/* Profil, téléphone avec indicatif, documents et photos, synchronisation du calendrier */
+.banner.ok { background: #dcfce7; color: #166534; }
+.profile-head { display: flex; align-items: center; gap: 22px; margin-bottom: 18px; flex-wrap: wrap; }
+.profile-head h2 { margin: 0 0 4px; }
+.profile-head p { margin: 2px 0; }
+.avatar-xl { display: inline-flex; align-items: center; justify-content: center; width: 88px; height: 88px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 2.2rem; font-weight: 700; object-fit: cover; flex: none; }
+.zodiac { white-space: nowrap; }
+.form .phone-group, .enc-form .panel .phone-group { display: flex; flex-direction: row; gap: 8px; align-items: flex-start; }
+.form .phone-group > div, .enc-form .panel .phone-group > div { margin: 0; }
+.form .phone-group > div:first-child, .enc-form .panel .phone-group > div:first-child { flex: 0 0 auto; max-width: 48%; }
+.form .phone-group > div:last-child, .enc-form .panel .phone-group > div:last-child { flex: 1 1 auto; min-width: 0; }
+.doc-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 4px; }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.photo-grid figure { margin: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.photo-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r); border: 1px solid var(--line); }
+.sync-url { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.sync-url input { flex: 1 1 320px; min-width: 0; font-family: ui-monospace, monospace; font-size: .85rem; }
+.sync-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+.sync-steps { padding-left: 20px; line-height: 1.6; }
 .choice-edit { display: flex; gap: 6px; align-items: center; margin: 0; }
 .choice-edit input[type=text] { flex: 1 1 220px; min-width: 0; }
 .choice-add { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }

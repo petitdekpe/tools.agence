@@ -27,6 +27,8 @@ security:
 
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
+        # Flux iCalendar du calendrier éditorial, lu par Google Agenda ou Apple Calendrier sans session : l'accès tient au jeton de l'adresse.
+        - { path: '^/calendrier/ical/[a-f0-9]{64}\.ics$', roles: PUBLIC_ACCESS }
         # Les droits fins sont des permissions de rôle (voir App\Security\Permission), vérifiées par chaque contrôleur.
         - { path: ^/admin, allow_if: "is_granted('admin.access')" }
         - { path: ^/, roles: ROLE_USER }

@@ -14,6 +14,7 @@
     {% set route = app.request.attributes.get('_route') %}
     <nav class="tabs">
         <a href="{{ path('app_calendrier') }}" class="{{ route == 'app_calendrier' ? 'active' }}">Calendrier</a>
-        <a href="{{ path('app_publications') }}" class="{{ route != 'app_calendrier' ? 'active' }}">Liste</a>
+        <a href="{{ path('app_publications') }}" class="{{ route not in ['app_calendrier', 'app_calendrier_sync'] ? 'active' }}">Liste</a>
+        <a href="{{ path('app_calendrier_sync') }}" class="{{ route == 'app_calendrier_sync' ? 'active' }}">Synchroniser</a>
     </nav>
 {% endblock %}

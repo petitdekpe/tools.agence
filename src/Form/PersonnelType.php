@@ -12,7 +12,6 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -44,7 +43,7 @@ class PersonnelType extends AbstractType
             ->add('jobTitle', TextType::class, ['label' => 'Poste / fonction', 'required' => false])
             ->add('department', TextType::class, ['label' => 'Service', 'required' => false])
             ->add('email', EmailType::class, ['label' => 'E-mail', 'required' => false])
-            ->add('phone', TelType::class, ['label' => 'Téléphone', 'required' => false])
+            ->add('phone', PhoneNumberType::class, ['label' => 'Téléphone'])
             ->add('hiredAt', DateType::class, $date('Date d\'entrée', ['required' => true]))
             ->add('leftAt', DateType::class, $date('Date de départ', ['help' => 'À renseigner quand la personne quitte l\'entreprise. Le matériel qu\'elle détient sera alors signalé.']))
             ->add('contractType', ChoiceType::class, ['label' => 'Type de contrat', 'choices' => array_flip($this->choices->labels('personnel_contract'))])
