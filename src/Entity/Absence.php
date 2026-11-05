@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AbsenceRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -57,7 +59,7 @@ class Absence
     private ?Personnel $personnel = null;
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['conge', 'maladie', 'maternite', 'sans_solde', 'permission', 'autre'], message: 'Type d\'absence invalide.')]
+    #[ChoiceOf('absence_type', message: 'Type d\'absence invalide.')]
     private string $type = 'conge';
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
@@ -184,7 +186,7 @@ class Absence
 
     public function getTypeLabel(): string
     {
-        return self::TYPES[$this->type] ?? $this->type;
+        return Choices::labelOf('absence_type', $this->type) ?? $this->type;
     }
 
     public function getDateDebut(): ?\DateTimeImmutable

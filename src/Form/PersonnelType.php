@@ -6,6 +6,7 @@ use App\Entity\Personnel;
 use App\Entity\Role;
 use App\Entity\User;
 use App\Repository\RoleRepository;
+use App\Service\Choices;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -23,6 +24,10 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 class PersonnelType extends AbstractType
 {
+    public function __construct(private readonly Choices $choices)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $date = static fn (string $label, array $extra = []): array => $extra + [
@@ -42,7 +47,7 @@ class PersonnelType extends AbstractType
             ->add('phone', TelType::class, ['label' => 'Téléphone', 'required' => false])
             ->add('hiredAt', DateType::class, $date('Date d\'entrée', ['required' => true]))
             ->add('leftAt', DateType::class, $date('Date de départ', ['help' => 'À renseigner quand la personne quitte l\'entreprise. Le matériel qu\'elle détient sera alors signalé.']))
-            ->add('contractType', ChoiceType::class, ['label' => 'Type de contrat', 'choices' => array_flip(Personnel::CONTRACTS)])
+            ->add('contractType', ChoiceType::class, ['label' => 'Type de contrat', 'choices' => array_flip($this->choices->labels('personnel_contract'))])
             ->add('contractStart', DateType::class, $date('Début du contrat'))
             ->add('contractEnd', DateType::class, $date('Fin du contrat', ['help' => 'Obligatoire pour un CDD.']))
             ->add('notes', TextareaType::class, ['label' => 'Notes', 'required' => false, 'attr' => ['rows' => 4, 'maxlength' => 5000]]);

@@ -7,8 +7,10 @@
     <div class="panel form-panel">
         {{ form_start(form, {attr: {class: 'form enc-form', novalidate: 'novalidate'}}) }}
             {{ form_errors(form) }}
+            {{ form_row(form.article) }}
             {{ form_row(form.designation) }}
             {{ form_row(form.category) }}
+            {{ form_row(form.quantity) }}
             {{ form_row(form.reference) }}
             {{ form_row(form.etat) }}
             {{ form_row(form.purchasedAt) }}

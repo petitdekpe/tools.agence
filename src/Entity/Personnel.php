@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PersonnelRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -72,7 +74,7 @@ class Personnel
     private ?\DateTimeImmutable $leftAt = null;
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['cdi', 'cdd', 'stage', 'prestataire', 'autre'], message: 'Type de contrat invalide.')]
+    #[ChoiceOf('personnel_contract', message: 'Type de contrat invalide.')]
     private string $contractType = self::CONTRACT_CDI;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
@@ -239,7 +241,7 @@ class Personnel
 
     public function getContractLabel(): string
     {
-        return self::CONTRACTS[$this->contractType] ?? $this->contractType;
+        return Choices::labelOf('personnel_contract', $this->contractType) ?? $this->contractType;
     }
 
     public function getContractStart(): ?\DateTimeImmutable

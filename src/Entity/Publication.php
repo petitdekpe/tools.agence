@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PublicationRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -75,11 +77,11 @@ class Publication
     private ?Client $client = null;
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['facebook', 'instagram', 'linkedin', 'x', 'tiktok', 'youtube', 'whatsapp', 'site', 'newsletter', 'autre'], message: 'Canal invalide.')]
+    #[ChoiceOf('publication_canal', message: 'Canal invalide.')]
     private string $canal = 'facebook';
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['post', 'carrousel', 'video', 'story', 'article', 'autre'], message: 'Format invalide.')]
+    #[ChoiceOf('publication_format', message: 'Format invalide.')]
     private string $format = 'post';
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
@@ -174,7 +176,7 @@ class Publication
 
     public function getCanalLabel(): string
     {
-        return self::CANAUX[$this->canal] ?? $this->canal;
+        return Choices::labelOf('publication_canal', $this->canal) ?? $this->canal;
     }
 
     public function getFormat(): string
@@ -191,7 +193,7 @@ class Publication
 
     public function getFormatLabel(): string
     {
-        return self::FORMATS[$this->format] ?? $this->format;
+        return Choices::labelOf('publication_format', $this->format) ?? $this->format;
     }
 
     public function getDatePublication(): ?\DateTimeImmutable

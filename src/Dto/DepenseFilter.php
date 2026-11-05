@@ -2,7 +2,7 @@
 
 namespace App\Dto;
 
-use App\Entity\Depense;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Recherche, filtres, tri et page de la liste des dépenses, lus dans la query string (liste et synthèse). */
@@ -26,11 +26,11 @@ final class DepenseFilter
         $filter = new self();
         $filter->q = mb_substr(trim((string) $request->query->get('q')), 0, 100);
         $categorie = (string) $request->query->get('categorie');
-        $filter->categorie = isset(Depense::CATEGORIES[$categorie]) ? $categorie : null;
+        $filter->categorie = Choices::has('depense_categorie', $categorie) ? $categorie : null;
         $etat = (string) $request->query->get('etat');
         $filter->etat = isset(self::ETATS[$etat]) ? $etat : null;
         $mode = (string) $request->query->get('mode');
-        $filter->mode = isset(Depense::MODES[$mode]) ? $mode : null;
+        $filter->mode = Choices::has('depense_mode', $mode) ? $mode : null;
         $filter->from = self::date($request->query->get('from'));
         $filter->to = self::date($request->query->get('to'));
         $sort = (string) $request->query->get('sort');

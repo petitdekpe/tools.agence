@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Absence;
 use App\Entity\Personnel;
 use App\Repository\AbsenceRepository;
+use App\Service\Choices;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -23,7 +24,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class AbsenceType extends AbstractType
 {
-    public function __construct(private readonly AbsenceRepository $absences)
+    public function __construct(private readonly AbsenceRepository $absences, private readonly Choices $choices)
     {
     }
 
@@ -37,7 +38,7 @@ class AbsenceType extends AbstractType
                 'choice_label' => static fn (Personnel $p): string => $p->getFullName().($p->getDepartment() ? ' · '.$p->getDepartment() : ''),
                 'placeholder' => 1 === \count($options['personnel_choices']) ? false : 'Choisir une personne',
             ])
-            ->add('type', ChoiceType::class, ['label' => 'Type d\'absence', 'choices' => array_flip(Absence::TYPES)])
+            ->add('type', ChoiceType::class, ['label' => 'Type d\'absence', 'choices' => array_flip($this->choices->labels('absence_type'))])
             ->add('dateDebut', DateType::class, [
                 'label' => 'Premier jour d\'absence',
                 'widget' => 'single_text',

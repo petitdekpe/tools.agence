@@ -12,6 +12,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\EncaissementRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Choices;
 use App\Service\EncaissementExporter;
 use App\Service\FiscalSettings;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,6 +32,7 @@ class EncaissementController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly EncaissementRepository $encaissements,
         private readonly ActivityLogger $activity,
+        private readonly Choices $choices,
         private readonly FiscalSettings $fiscal,
         private readonly DocumentRepository $documents,
     ) {
@@ -56,7 +58,7 @@ class EncaissementController extends AbstractController
             'pages' => $pages,
             'filter' => $filter,
             'clients' => $clients->findAllByName(),
-            'natures' => Encaissement::NATURES,
+            'natures' => $this->choices->labels('encaissement_nature'),
             'modes' => EncaissementFilter::MODES,
             'coherences' => EncaissementFilter::COHERENCES,
         ]);
@@ -182,7 +184,7 @@ class EncaissementController extends AbstractController
             'months' => $months,
             'byClient' => $byClient,
             'byNature' => $byNature,
-            'natures' => Encaissement::NATURES,
+            'natures' => $this->choices->labels('encaissement_nature'),
             'sums' => [
                 'months' => $this->sumColumns($months, ['n', 'ttc', 'ht', 'tvaReverser', 'aib', 'net']),
                 'clients' => $this->sumColumns($byClient, ['n', 'ttc', 'net']),
@@ -220,7 +222,7 @@ class EncaissementController extends AbstractController
             $parts[] = 'client '.$client->getName();
         }
         if ($filter->nature) {
-            $parts[] = 'nature '.Encaissement::NATURES[$filter->nature];
+            $parts[] = 'nature '.$this->choices->label('encaissement_nature', $filter->nature);
         }
         if ($filter->mode) {
             $parts[] = 'mode '.EncaissementFilter::MODES[$filter->mode];

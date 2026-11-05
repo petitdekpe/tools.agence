@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Service\Choices;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -126,7 +127,7 @@ class Affectation
 
     public function getReturnEtatLabel(): ?string
     {
-        return null === $this->returnEtat ? null : (Materiel::ETATS[$this->returnEtat] ?? $this->returnEtat);
+        return null === $this->returnEtat ? null : Choices::labelOf('materiel_etat', $this->returnEtat);
     }
 
     public function getAssignedBy(): ?User

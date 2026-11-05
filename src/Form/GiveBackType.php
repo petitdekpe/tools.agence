@@ -2,7 +2,7 @@
 
 namespace App\Form;
 
-use App\Entity\Materiel;
+use App\Service\Choices;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -14,6 +14,10 @@ use Symfony\Component\Validator\Constraints\NotNull;
 /** Restitution d'un matériel. Les données sont un tableau : returnedAt, etat (optionnel), note. */
 class GiveBackType extends AbstractType
 {
+    public function __construct(private readonly Choices $choices)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -27,7 +31,7 @@ class GiveBackType extends AbstractType
             ])
             ->add('etat', ChoiceType::class, [
                 'label' => 'État constaté au retour',
-                'choices' => array_flip(Materiel::ETATS),
+                'choices' => array_flip($this->choices->labels('materiel_etat')),
                 'required' => false,
                 'placeholder' => 'Inchangé',
             ])

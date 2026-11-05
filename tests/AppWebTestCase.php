@@ -22,7 +22,7 @@ abstract class AppWebTestCase extends WebTestCase
     {
         $this->browser = static::createClient();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        foreach (['tache', 'mission', 'projet', 'publication', 'depense', 'ticket', 'absence', 'affectation', 'materiel', 'personnel', 'role_permission', 'encaissement', 'document', 'activity_log', 'correction_memory', 'correction', 'client', 'fiscal_setting', 'app_user', 'app_role'] as $table) {
+        foreach (['tache', 'mission', 'projet', 'publication', 'depense', 'ticket', 'absence', 'affectation', 'materiel', 'personnel', 'role_permission', 'encaissement', 'document', 'activity_log', 'correction_memory', 'correction', 'client', 'fiscal_setting', 'app_choice', 'app_user', 'app_role'] as $table) {
             $this->em->getConnection()->executeStatement('DELETE FROM '.$table);
         }
         static::getContainer()->get(RoleManager::class)->ensureSystemRoles();

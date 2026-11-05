@@ -6,6 +6,7 @@ use App\Entity\Affectation;
 use App\Entity\Materiel;
 use App\Entity\Personnel;
 use App\Entity\User;
+use App\Service\Choices;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -16,7 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 class MaterielAssigner
 {
-    public function __construct(private readonly EntityManagerInterface $em)
+    public function __construct(private readonly EntityManagerInterface $em, private readonly Choices $choices)
     {
     }
 
@@ -56,7 +57,7 @@ class MaterielAssigner
     /** @param string|null $etat état constaté au retour ; null laisse l'état du matériel inchangé */
     public function giveBack(Materiel $materiel, \DateTimeImmutable $date, ?string $etat, ?string $note, ?User $by): Affectation
     {
-        if (null !== $etat && !isset(Materiel::ETATS[$etat])) {
+        if (null !== $etat && !$this->choices->exists('materiel_etat', $etat)) {
             throw new \DomainException('État invalide.');
         }
 

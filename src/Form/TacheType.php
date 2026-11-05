@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Personnel;
 use App\Entity\Tache;
+use App\Service\Choices;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -16,6 +17,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 /** Saisie d'une carte du tableau d'un projet. */
 class TacheType extends AbstractType
 {
+    public function __construct(private readonly Choices $choices)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -32,7 +37,7 @@ class TacheType extends AbstractType
                     ->setParameter('today', new \DateTimeImmutable('today'), 'date_immutable')
                     ->orderBy('p.lastName', 'ASC')->addOrderBy('p.firstName', 'ASC'),
             ])
-            ->add('priorite', ChoiceType::class, ['label' => 'Priorité', 'choices' => array_flip(Tache::PRIORITES)])
+            ->add('priorite', ChoiceType::class, ['label' => 'Priorité', 'choices' => array_flip($this->choices->labels('tache_priorite'))])
             ->add('echeance', DateType::class, ['label' => 'Échéance', 'widget' => 'single_text', 'input' => 'datetime_immutable', 'required' => false, 'invalid_message' => 'Date invalide.'])
             ->add('description', TextareaType::class, ['label' => 'Détails', 'required' => false, 'attr' => ['rows' => 5, 'maxlength' => 4000]]);
     }

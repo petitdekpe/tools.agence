@@ -13,10 +13,11 @@ use App\Repository\MaterielRepository;
 use App\Repository\PersonnelRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
-use App\Service\Notifications;
 use App\Service\ChangeSet;
+use App\Service\Choices;
 use App\Service\MaterielAssigner;
 use App\Service\MaterielExporter;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -41,6 +42,7 @@ class MaterielController extends AbstractController
         private readonly PersonnelRepository $personnel,
         private readonly MaterielAssigner $assigner,
         private readonly ActivityLogger $activity,
+        private readonly Choices $choices,
         private readonly Notifications $notifications,
     ) {
     }
@@ -64,8 +66,8 @@ class MaterielController extends AbstractController
             'page' => $filter->page,
             'pages' => $pages,
             'filter' => $filter,
-            'categories' => Materiel::CATEGORIES,
-            'etats' => Materiel::ETATS,
+            'categories' => $this->choices->labels('materiel_category'),
+            'etats' => $this->choices->labels('materiel_etat'),
             'affectations' => MaterielFilter::AFFECTATIONS,
             'holders' => $this->personnel->findBy(['deletedAt' => null], ['lastName' => 'ASC', 'firstName' => 'ASC']),
             'departedCount' => $this->materiel->countHeldByDeparted(),
@@ -166,7 +168,7 @@ class MaterielController extends AbstractController
             $data = $form->getData();
             try {
                 $this->assigner->giveBack($item, $data['returnedAt'], $data['etat'], $data['note'], $this->currentUser());
-                $this->activity->log('materiel.return', ['id' => $id, 'materiel' => $item->getDesignation(), 'rendu_par' => $holder?->getFullName(), 'date' => $data['returnedAt']->format('d/m/Y'), 'etat' => $data['etat'] ? Materiel::ETATS[$data['etat']] : null]);
+                $this->activity->log('materiel.return', ['id' => $id, 'materiel' => $item->getDesignation(), 'rendu_par' => $holder?->getFullName(), 'date' => $data['returnedAt']->format('d/m/Y'), 'etat' => $data['etat'] ? $this->choices->label('materiel_etat', $data['etat']) : null]);
                 $this->notifications->materielReturned($item, $holder, $data['returnedAt']);
                 $this->addFlash('success', sprintf('« %s » restitué.', $item->getDesignation()));
 
@@ -263,10 +265,10 @@ class MaterielController extends AbstractController
             $parts[] = 'recherche « '.$filter->q.' »';
         }
         if ($filter->categorie) {
-            $parts[] = 'catégorie '.Materiel::CATEGORIES[$filter->categorie];
+            $parts[] = 'catégorie '.$this->choices->label('materiel_category', $filter->categorie);
         }
         if ($filter->etat) {
-            $parts[] = 'état '.Materiel::ETATS[$filter->etat];
+            $parts[] = 'état '.$this->choices->label('materiel_etat', $filter->etat);
         }
         if ($filter->affectation) {
             $parts[] = MaterielFilter::AFFECTATIONS[$filter->affectation];

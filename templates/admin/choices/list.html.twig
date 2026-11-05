@@ -1,0 +1,68 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block page_title %}{{ definition.title }}{% endblock %}
+
+{% block page_actions %}<a class="ghost" href="{{ path('app_admin_choices') }}">← Toutes les listes</a>{% endblock %}
+
+{% block content %}
+    {% set token = csrf_token('choice_' ~ list) %}
+    <p class="muted">{{ definition.help }}</p>
+
+    <div class="table-card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Valeur</th>
+                    <th>Utilisation</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in rows %}
+                <tr>
+                    <td>
+                        <form method="post" action="{{ path('app_admin_choice_rename', {list: list, id: c.id}) }}" class="choice-edit">
+                            <input type="hidden" name="_token" value="{{ token }}">
+                            <input type="text" name="label" value="{{ c.label }}" maxlength="80" required aria-label="Libellé de {{ c.label }}">
+                            <button class="ghost" type="submit">Renommer</button>
+                        </form>
+                        <small class="block muted">Code : {{ c.code }}</small>
+                    </td>
+                    <td>
+                        {% if usage[c.code] is defined %}<span class="chip chip-info">{{ usage[c.code] }}</span>{% else %}<span class="muted">Non utilisé</span>{% endif %}
+                    </td>
+                    <td class="right">
+                        <div class="row-actions">
+                            <form method="post" action="{{ path('app_admin_choice_move', {list: list, id: c.id}) }}">
+                                <input type="hidden" name="_token" value="{{ token }}">
+                                <input type="hidden" name="sens" value="up">
+                                <button class="ghost" type="submit" title="Monter" aria-label="Monter {{ c.label }}" {{ loop.first ? 'disabled' }}>↑</button>
+                            </form>
+                            <form method="post" action="{{ path('app_admin_choice_move', {list: list, id: c.id}) }}">
+                                <input type="hidden" name="_token" value="{{ token }}">
+                                <input type="hidden" name="sens" value="down">
+                                <button class="ghost" type="submit" title="Descendre" aria-label="Descendre {{ c.label }}" {{ loop.last ? 'disabled' }}>↓</button>
+                            </form>
+                            {% if c.code in locked %}
+                                <span class="chip chip-muted" title="Utilisée par l'application : on peut la renommer, pas la supprimer.">Verrouillée</span>
+                            {% else %}
+                                <form method="post" action="{{ path('app_admin_choice_delete', {list: list, id: c.id}) }}"
+                                      onsubmit="return confirm('Supprimer {{ c.label|e('js') }} de la liste ?')">
+                                    <input type="hidden" name="_token" value="{{ token }}">
+                                    <button class="ghost danger" type="submit">Supprimer</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form method="post" action="{{ path('app_admin_choice_add', {list: list}) }}" class="choice-add">
+        <input type="hidden" name="_token" value="{{ token }}">
+        <input type="text" name="label" maxlength="80" required placeholder="Nouvelle valeur" aria-label="Nouvelle valeur">
+        <button class="btn" type="submit">+ Ajouter</button>
+    </form>
+{% endblock %}

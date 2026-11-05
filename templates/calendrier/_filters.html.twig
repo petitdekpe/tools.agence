@@ -8,7 +8,7 @@
     </select>
     <select name="canal" aria-label="Canal">
         <option value="">Tous les canaux</option>
-        {% for key, label in constant('App\\Entity\\Publication::CANAUX') %}<option value="{{ key }}" {{ filter.canal == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        {% for key, label in choices('publication_canal') %}<option value="{{ key }}" {{ filter.canal == key ? 'selected' }}>{{ label }}</option>{% endfor %}
     </select>
     <select name="statut" aria-label="Statut">
         <option value="">Tous les statuts</option>

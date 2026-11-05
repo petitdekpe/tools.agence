@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\MaterielRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\DBAL\Types\Types;
@@ -32,6 +34,17 @@ class Materiel
         'autre' => 'Autre',
     ];
 
+    public const ARTICLES = [
+        'ordinateur_portable' => 'Ordinateur portable',
+        'ecran' => 'Écran',
+        'clavier' => 'Clavier',
+        'souris' => 'Souris',
+        'casque' => 'Casque audio',
+        'cable_hdmi' => 'Câble HDMI',
+        'telephone' => 'Téléphone',
+        'appareil_photo' => 'Appareil photo',
+    ];
+
     public const ETATS = [
         'neuf' => 'Neuf',
         'bon' => 'Bon état',
@@ -51,8 +64,20 @@ class Materiel
     private string $designation = '';
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['informatique', 'telephonie', 'audiovisuel', 'mobilier', 'vehicule', 'outillage', 'autre'], message: 'Catégorie invalide.')]
+    #[ChoiceOf('materiel_category', message: 'Catégorie invalide.')]
     private string $category = 'informatique';
+
+    /** Article de la liste de référence (code d'une valeur de « materiel_article »), facultatif. */
+    #[ORM\Column(length: 40, nullable: true)]
+    #[ChoiceOf('materiel_article', message: 'Article de référence invalide.')]
+    private ?string $article = null;
+
+    /** Nombre d'unités du lot : le lot entier a un seul détenteur. */
+    #[ORM\Column(options: ['default' => 1])]
+    #[Assert\NotNull(message: 'La quantité est obligatoire.')]
+    #[Assert\Positive(message: 'La quantité doit être d\'au moins 1.')]
+    #[Assert\LessThanOrEqual(99999, message: 'Quantité trop élevée.')]
+    private int $quantity = 1;
 
     /** Numéro de série ou code d'inventaire. */
     #[ORM\Column(length: 80, nullable: true)]
@@ -69,7 +94,7 @@ class Materiel
     private ?string $purchaseValue = null;
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['neuf', 'bon', 'use', 'panne', 'reforme'], message: 'État invalide.')]
+    #[ChoiceOf('materiel_etat', message: 'État invalide.')]
     private string $etat = 'bon';
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -127,7 +152,36 @@ class Materiel
 
     public function getCategoryLabel(): string
     {
-        return self::CATEGORIES[$this->category] ?? $this->category;
+        return Choices::labelOf('materiel_category', $this->category) ?? $this->category;
+    }
+
+    public function getArticle(): ?string
+    {
+        return $this->article;
+    }
+
+    public function setArticle(?string $article): static
+    {
+        $this->article = '' === $article ? null : $article;
+
+        return $this;
+    }
+
+    public function getArticleLabel(): ?string
+    {
+        return Choices::labelOf('materiel_article', $this->article);
+    }
+
+    public function getQuantity(): int
+    {
+        return $this->quantity;
+    }
+
+    public function setQuantity(?int $quantity): static
+    {
+        $this->quantity = (int) $quantity;
+
+        return $this;
     }
 
     public function getReference(): ?string
@@ -181,7 +235,7 @@ class Materiel
 
     public function getEtatLabel(): string
     {
-        return self::ETATS[$this->etat] ?? $this->etat;
+        return Choices::labelOf('materiel_etat', $this->etat) ?? $this->etat;
     }
 
     public function isReformed(): bool
@@ -263,6 +317,8 @@ class Materiel
         return [
             'designation' => $this->designation,
             'categorie' => $this->getCategoryLabel(),
+            'article' => $this->getArticleLabel(),
+            'quantite' => $this->quantity,
             'reference' => $this->reference,
             'date_achat' => $this->purchasedAt?->format('d/m/Y'),
             'valeur_achat' => null === $this->purchaseValue ? null : (int) $this->purchaseValue,

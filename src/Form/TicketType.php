@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Materiel;
 use App\Entity\Ticket;
+use App\Service\Choices;
 use App\Service\Numbering;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -23,7 +24,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class TicketType extends AbstractType
 {
-    public function __construct(private readonly Numbering $numbering)
+    public function __construct(private readonly Numbering $numbering, private readonly Choices $choices)
     {
     }
 
@@ -54,12 +55,12 @@ class TicketType extends AbstractType
                 'label' => 'Catégorie',
                 'required' => false,
                 'placeholder' => 'Non précisée',
-                'choices' => array_flip(Materiel::CATEGORIES),
+                'choices' => array_flip($this->choices->labels('materiel_category')),
             ]);
         }
 
         $builder
-            ->add('priorite', ChoiceType::class, ['label' => 'Priorité', 'choices' => array_flip(Ticket::PRIORITES)])
+            ->add('priorite', ChoiceType::class, ['label' => 'Priorité', 'choices' => array_flip($this->choices->labels('ticket_priorite'))])
             ->add('description', TextareaType::class, [
                 'label' => $isPanne ? 'Ce qui s\'est passé' : 'Pourquoi et pour qui ?',
                 'required' => false,

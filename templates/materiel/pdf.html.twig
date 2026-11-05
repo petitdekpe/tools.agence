@@ -24,7 +24,7 @@
     </div>
     <table>
         <thead>
-            <tr><th>Désignation</th><th>Catégorie</th><th>Référence</th><th>État</th><th>Détenteur</th><th>Depuis le</th><th>Achat</th><th class="num">Valeur</th></tr>
+            <tr><th>Désignation</th><th>Catégorie</th><th class="num">Qté</th><th>Référence</th><th>État</th><th>Détenteur</th><th>Depuis le</th><th>Achat</th><th class="num">Valeur</th></tr>
         </thead>
         <tbody>
         {% for m in rows %}
@@ -32,6 +32,7 @@
             <tr>
                 <td>{{ m.designation }}</td>
                 <td>{{ m.categoryLabel }}</td>
+                <td class="num">{{ m.quantity }}</td>
                 <td>{{ m.reference }}</td>
                 <td>{{ m.etatLabel }}</td>
                 <td>{% if open %}{{ open.personnel.fullName }}{% if not open.personnel.active %} <span class="bad">(parti)</span>{% endif %}{% else %}{{ m.reformed ? '' : 'Disponible' }}{% endif %}</td>
@@ -43,7 +44,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4">Total · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
+                <td colspan="5">Total ·{{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
                 <td colspan="3">{{ totals.assigned }} affecté{{ totals.assigned > 1 ? 's' }}</td>
                 <td class="num">{{ totals.value|fcfa_number }}</td>
             </tr>

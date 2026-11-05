@@ -511,6 +511,7 @@ main h2 { font-size: 1.5rem; margin: 30px 0 14px; font-weight: 700; letter-spaci
 .cal td.today { background: #f3f1fe; }
 .cal-cell { border-left: 1px solid #f1f1f1; }
 .cal-bar { display: block; height: 22px; margin: 0 -1px; background: var(--ink); }
+.cal-bar[class*='type-'], .cal-dot[class*='type-'] { background: #12a594; }
 .cal-bar.type-conge, .cal-dot.type-conge { background: #6d5df6; }
 .cal-bar.type-maladie, .cal-dot.type-maladie { background: #e5484d; }
 .cal-bar.type-maternite, .cal-dot.type-maternite { background: #d6409f; }
@@ -791,3 +792,11 @@ a.kb-title:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 }
+
+/* Listes de choix (administration) */
+.choice-group { margin-top: 24px; }
+.choice-group h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.choice-edit { display: flex; gap: 6px; align-items: center; margin: 0; }
+.choice-edit input[type=text] { flex: 1 1 220px; min-width: 0; }
+.choice-add { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+.choice-add input[type=text] { flex: 1 1 260px; max-width: 420px; }

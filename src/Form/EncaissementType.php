@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Client;
 use App\Entity\Document;
 use App\Entity\Encaissement;
+use App\Service\Choices;
 use App\Service\EncaissementCalculator;
 use App\Service\FiscalSettings;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -26,7 +27,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class EncaissementType extends AbstractType
 {
-    public function __construct(private readonly EncaissementCalculator $calculator, private readonly FiscalSettings $settings)
+    public function __construct(private readonly EncaissementCalculator $calculator, private readonly FiscalSettings $settings, private readonly Choices $choices)
     {
     }
 
@@ -61,7 +62,7 @@ class EncaissementType extends AbstractType
             ])
             ->add('nature', ChoiceType::class, [
                 'label' => 'Nature du paiement',
-                'choices' => array_flip(Encaissement::NATURES),
+                'choices' => array_flip($this->choices->labels('encaissement_nature')),
                 'help' => 'Une avance ou un acompte est taxé comme un paiement de facture : la TVA est due dès l\'encaissement.',
             ])
             ->add('facture', EntityType::class, [

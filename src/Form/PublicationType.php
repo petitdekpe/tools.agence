@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Client;
 use App\Entity\Personnel;
 use App\Entity\Publication;
+use App\Service\Choices;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -19,6 +20,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 /** Saisie d'une publication. Le statut « validé » n'est proposé qu'à ceux qui peuvent valider (option can_validate). */
 class PublicationType extends AbstractType
 {
+    public function __construct(private readonly Choices $choices)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         /** @var Publication $publication */
@@ -37,8 +42,8 @@ class PublicationType extends AbstractType
                 'choice_label' => static fn (Client $c): string => $c->getName(),
                 'query_builder' => static fn ($repository) => $repository->createQueryBuilder('c')->orderBy('c.name', 'ASC'),
             ])
-            ->add('canal', ChoiceType::class, ['label' => 'Canal', 'choices' => array_flip(Publication::CANAUX)])
-            ->add('format', ChoiceType::class, ['label' => 'Format', 'choices' => array_flip(Publication::FORMATS)])
+            ->add('canal', ChoiceType::class, ['label' => 'Canal', 'choices' => array_flip($this->choices->labels('publication_canal'))])
+            ->add('format', ChoiceType::class, ['label' => 'Format', 'choices' => array_flip($this->choices->labels('publication_format'))])
             ->add('datePublication', DateType::class, [
                 'label' => 'Date de publication',
                 'widget' => 'single_text',

@@ -3,6 +3,7 @@
 namespace App\Dto;
 
 use App\Entity\Publication;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Recherche, filtres, tri et page du calendrier éditorial, lus dans la query string (grille mensuelle et liste). */
@@ -27,7 +28,7 @@ final class PublicationFilter
         $filter->q = mb_substr(trim((string) $request->query->get('q')), 0, 100);
         $filter->client = self::int($request, 'client') ?: null;
         $canal = (string) $request->query->get('canal');
-        $filter->canal = isset(Publication::CANAUX[$canal]) ? $canal : null;
+        $filter->canal = Choices::has('publication_canal', $canal) ? $canal : null;
         $statut = (string) $request->query->get('statut');
         $filter->statut = isset(Publication::STATUTS[$statut]) || 'encours' === $statut ? $statut : null;
         $filter->responsable = self::int($request, 'responsable') ?: null;

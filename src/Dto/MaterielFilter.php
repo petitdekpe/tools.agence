@@ -2,7 +2,7 @@
 
 namespace App\Dto;
 
-use App\Entity\Materiel;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Recherche, filtres, tri et page de l'inventaire, lus dans la query string (liste et exports). */
@@ -29,9 +29,9 @@ final class MaterielFilter
         $filter = new self();
         $filter->q = mb_substr(trim((string) $request->query->get('q')), 0, 100);
         $categorie = (string) $request->query->get('categorie');
-        $filter->categorie = isset(Materiel::CATEGORIES[$categorie]) ? $categorie : null;
+        $filter->categorie = Choices::has('materiel_category', $categorie) ? $categorie : null;
         $etat = (string) $request->query->get('etat');
-        $filter->etat = isset(Materiel::ETATS[$etat]) ? $etat : null;
+        $filter->etat = Choices::has('materiel_etat', $etat) ? $etat : null;
         $affectation = (string) $request->query->get('affectation');
         $filter->affectation = isset(self::AFFECTATIONS[$affectation]) ? $affectation : null;
         $filter->detenteur = $request->query->getInt('detenteur') ?: null;

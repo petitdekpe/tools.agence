@@ -44,7 +44,7 @@
         <input type="search" name="q" value="{{ filter.q }}" placeholder="Fournisseur, libellé ou n° de facture…" aria-label="Rechercher">
         <select name="categorie" aria-label="Catégorie">
             <option value="">Toutes les catégories</option>
-            {% for key, label in constant('App\\Entity\\Depense::CATEGORIES') %}<option value="{{ key }}" {{ filter.categorie == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            {% for key, label in choices('depense_categorie') %}<option value="{{ key }}" {{ filter.categorie == key ? 'selected' }}>{{ label }}</option>{% endfor %}
         </select>
         <select name="etat" aria-label="État">
             <option value="">Tous les états</option>
@@ -52,7 +52,7 @@
         </select>
         <select name="mode" aria-label="Mode de paiement">
             <option value="">Tous les modes</option>
-            {% for key, label in constant('App\\Entity\\Depense::MODES') %}<option value="{{ key }}" {{ filter.mode == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            {% for key, label in choices('depense_mode') %}<option value="{{ key }}" {{ filter.mode == key ? 'selected' }}>{{ label }}</option>{% endfor %}
         </select>
         <label class="inline">Du <input type="date" name="from" value="{{ filter.from ? filter.from|date('Y-m-d') }}"></label>
         <label class="inline">au <input type="date" name="to" value="{{ filter.to ? filter.to|date('Y-m-d') }}"></label>

@@ -3,7 +3,9 @@
 namespace App\Entity;
 
 use App\Repository\DepenseRepository;
+use App\Service\Choices;
 use App\Service\EncaissementCalculator;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -62,7 +64,7 @@ class Depense
     private string $fournisseur = '';
 
     #[ORM\Column(length: 20)]
-    #[Assert\Choice(choices: ['loyer', 'salaires', 'fournitures', 'transport', 'communication', 'soustraitance', 'impots', 'materiel', 'abonnements', 'autre'], message: 'Catégorie invalide.')]
+    #[ChoiceOf('depense_categorie', message: 'Catégorie invalide.')]
     private string $categorie = 'autre';
 
     #[ORM\Column(length: 160)]
@@ -137,10 +139,10 @@ class Depense
     #[Assert\Callback]
     public function validateRules(ExecutionContextInterface $context): void
     {
-        if (null !== $this->datePaiement && (null === $this->mode || !isset(self::MODES[$this->mode]))) {
+        if (null !== $this->datePaiement && (null === $this->mode || !Choices::has('depense_mode', $this->mode))) {
             $context->buildViolation('Indiquez le mode de paiement.')->atPath('mode')->addViolation();
         }
-        if (null !== $this->mode && !isset(self::MODES[$this->mode])) {
+        if (null !== $this->mode && !Choices::has('depense_mode', $this->mode)) {
             $context->buildViolation('Mode de paiement invalide.')->atPath('mode')->addViolation();
         }
         if ($this->echeance && $this->dateDepense && $this->echeance < $this->dateDepense) {
@@ -191,7 +193,7 @@ class Depense
 
     public function getCategorieLabel(): string
     {
-        return self::CATEGORIES[$this->categorie] ?? $this->categorie;
+        return Choices::labelOf('depense_categorie', $this->categorie) ?? $this->categorie;
     }
 
     public function getLibelle(): string
@@ -317,7 +319,7 @@ class Depense
 
     public function getModeLabel(): ?string
     {
-        return null === $this->mode ? null : (self::MODES[$this->mode] ?? $this->mode);
+        return null === $this->mode ? null : Choices::labelOf('depense_mode', $this->mode);
     }
 
     public function getObservation(): ?string

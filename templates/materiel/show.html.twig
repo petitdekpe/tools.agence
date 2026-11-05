@@ -17,6 +17,8 @@
             <h2>Fiche</h2>
             <dl class="facts">
                 <div><dt>Catégorie</dt><dd>{{ item.categoryLabel }}</dd></div>
+                <div><dt>Quantité</dt><dd>{{ item.quantity }}</dd></div>
+                {% if item.article %}<div><dt>Article de référence</dt><dd>{{ item.articleLabel }}</dd></div>{% endif %}
                 <div><dt>Référence</dt><dd>{{ item.reference ?: '—' }}</dd></div>
                 <div><dt>État</dt><dd>{{ item.etatLabel }}</dd></div>
                 <div><dt>Date d'achat</dt><dd>{{ item.purchasedAt ? item.purchasedAt|date('d/m/Y') : '—' }}</dd></div>

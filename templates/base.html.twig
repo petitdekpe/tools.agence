@@ -100,6 +100,7 @@
                                 {% if is_granted('ROLE_ADMIN') %}<a class="nav-item {{ route starts with 'app_admin_role' ? 'active' }}" href="{{ path('app_admin_roles') }}">{{ i.icon('key', 20) }}<span>Rôles</span></a>{% endif %}
                                 {% if is_granted('activity.view') %}<a class="nav-item {{ route == 'app_admin_activity' ? 'active' }}" href="{{ path('app_admin_activity') }}">{{ i.icon('list', 20) }}<span>Journal d'activité</span></a>{% endif %}
                                 {% if is_granted('ROLE_ADMIN') %}
+                                    <a class="nav-item {{ route starts with 'app_admin_choice' ? 'active' }}" href="{{ path('app_admin_choices') }}">{{ i.icon('list', 20) }}<span>Listes de choix</span></a>
                                     <a class="nav-item {{ route == 'app_admin_settings' ? 'active' }}" href="{{ path('app_admin_settings') }}">{{ i.icon('sliders', 20) }}<span>Réglages du site</span></a>
                                     <a class="nav-item {{ route == 'app_admin_fiscal' ? 'active' }}" href="{{ path('app_admin_fiscal') }}">{{ i.icon('percent', 20) }}<span>Paramètres fiscaux</span></a>
                                 {% endif %}

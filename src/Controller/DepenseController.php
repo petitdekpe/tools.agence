@@ -10,6 +10,7 @@ use App\Repository\DepenseRepository;
 use App\Repository\EncaissementRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
+use App\Service\Choices;
 use App\Service\EncaissementCalculator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,6 +29,7 @@ class DepenseController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly DepenseRepository $depenses,
         private readonly ActivityLogger $activity,
+        private readonly Choices $choices,
     ) {
     }
 
@@ -102,7 +104,7 @@ class DepenseController extends AbstractController
             'byCategory' => $this->depenses->categorySummary($filter->from, $filter->to),
             'bySupplier' => $this->depenses->supplierSummary($filter->from, $filter->to),
             'canSeeIncome' => $canSeeIncome,
-            'categories' => Depense::CATEGORIES,
+            'categories' => $this->choices->labels('depense_categorie'),
         ]);
     }
 

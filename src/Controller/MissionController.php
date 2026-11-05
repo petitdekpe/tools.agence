@@ -13,9 +13,10 @@ use App\Repository\PersonnelRepository;
 use App\Repository\ProjetRepository;
 use App\Security\Permission;
 use App\Service\ActivityLogger;
-use App\Service\Notifications;
+use App\Service\Choices;
 use App\Service\MissionPlanner;
 use App\Service\MissionReview;
+use App\Service\Notifications;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,6 +38,7 @@ class MissionController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly MissionRepository $missions,
         private readonly ActivityLogger $activity,
+        private readonly Choices $choices,
         private readonly Notifications $notifications,
         private readonly MissionPlanner $planner,
     ) {
@@ -140,7 +142,7 @@ class MissionController extends AbstractController
             'report' => $review->build($from, $to),
             'presets' => $presets,
             'preset' => $preset,
-            'resultats' => Mission::RESULTATS,
+            'resultats' => $this->choices->labels('mission_resultat'),
             'statuts' => Mission::STATUTS,
         ]);
     }
@@ -191,7 +193,7 @@ class MissionController extends AbstractController
             'conflicts' => $this->planner->conflicts($mission),
             'canReport' => $this->canReport($mission),
             'statuts' => Mission::STATUTS,
-            'resultats' => Mission::RESULTATS,
+            'resultats' => $this->choices->labels('mission_resultat'),
         ]);
     }
 
@@ -273,7 +275,7 @@ class MissionController extends AbstractController
 
         $resultat = (string) $request->request->get('resultat');
         $compteRendu = trim((string) $request->request->get('compte_rendu'));
-        if (!isset(Mission::RESULTATS[$resultat])) {
+        if (!$this->choices->exists('mission_resultat', $resultat)) {
             $this->addFlash('error', 'Indiquez si les objectifs ont été atteints.');
 
             return $this->redirectToRoute('app_mission_show', ['id' => $id]);

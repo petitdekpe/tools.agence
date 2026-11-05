@@ -14,6 +14,7 @@ use App\Security\Permission;
 use App\Service\AccountProvisioner;
 use App\Service\ActivityLogger;
 use App\Service\ChangeSet;
+use App\Service\Choices;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -34,6 +35,7 @@ class PersonnelController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly PersonnelRepository $personnel,
         private readonly ActivityLogger $activity,
+        private readonly Choices $choices,
         private readonly RoleRepository $roles,
         private readonly AccountProvisioner $accounts,
         private readonly LoggerInterface $logger,
@@ -59,7 +61,7 @@ class PersonnelController extends AbstractController
             'pages' => $pages,
             'filter' => $filter,
             'statuses' => PersonnelFilter::STATUSES,
-            'contracts' => Personnel::CONTRACTS,
+            'contracts' => $this->choices->labels('personnel_contract'),
             'departments' => $this->personnel->departments(),
             // Le nombre de matériels détenus n'est affiché qu'à ceux qui peuvent voir l'inventaire.
             'held' => $this->isGranted(Permission::MATERIEL_VIEW) ? $this->personnel->heldCounts(array_map(static fn (Personnel $p): int => $p->getId(), $rows)) : null,

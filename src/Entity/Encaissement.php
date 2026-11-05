@@ -3,7 +3,9 @@
 namespace App\Entity;
 
 use App\Repository\EncaissementRepository;
+use App\Service\Choices;
 use App\Service\EncaissementCalculator;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -45,7 +47,7 @@ class Encaissement
     private ?\DateTimeImmutable $dateEncaissement = null;
 
     #[ORM\Column(length: 20, options: ['default' => self::NATURE_FACTURE])]
-    #[Assert\Choice(choices: [self::NATURE_FACTURE, self::NATURE_AVANCE, 'solde', 'autre'], message: 'Nature invalide.')]
+    #[ChoiceOf('encaissement_nature', message: 'Nature invalide.')]
     private string $nature = self::NATURE_FACTURE;
 
     #[ORM\ManyToOne]
@@ -189,7 +191,7 @@ class Encaissement
 
     public function getNatureLabel(): string
     {
-        return self::NATURES[$this->nature] ?? $this->nature;
+        return Choices::labelOf('encaissement_nature', $this->nature) ?? $this->nature;
     }
 
     public function getClient(): ?Client

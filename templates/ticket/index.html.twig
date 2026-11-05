@@ -45,7 +45,7 @@
         </select>
         <select name="priorite" aria-label="Priorité">
             <option value="">Toutes les priorités</option>
-            {% for key, label in constant('App\\Entity\\Ticket::PRIORITES') %}<option value="{{ key }}" {{ filter.priorite == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            {% for key, label in choices('ticket_priorite') %}<option value="{{ key }}" {{ filter.priorite == key ? 'selected' }}>{{ label }}</option>{% endfor %}
         </select>
         <button class="btn" type="submit">Filtrer</button>
         {% if filter.isActive %}<a class="ghost" href="{{ path('app_tickets', {type: filter.type}) }}">Réinitialiser</a>{% endif %}

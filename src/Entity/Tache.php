@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\TacheRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -54,7 +56,7 @@ class Tache
     private int $position = 0;
 
     #[ORM\Column(length: 10)]
-    #[Assert\Choice(choices: ['basse', 'normale', 'haute'], message: 'Priorité invalide.')]
+    #[ChoiceOf('tache_priorite', message: 'Priorité invalide.')]
     private string $priorite = 'normale';
 
     #[ORM\ManyToOne]
@@ -252,7 +254,7 @@ class Tache
             'projet' => $this->projet?->getNom(),
             'titre' => $this->titre,
             'statut' => $this->getStatutLabel(),
-            'priorite' => self::PRIORITES[$this->priorite] ?? $this->priorite,
+            'priorite' => Choices::labelOf('tache_priorite', $this->priorite) ?? $this->priorite,
             'assignee' => $this->assignee?->getFullName(),
             'echeance' => $this->echeance?->format('d/m/Y'),
             'description' => $this->description,

@@ -11,7 +11,7 @@
             <a class="ghost" href="{{ path('app_absence_calendar') }}">Ce mois-ci</a>
         </span>
         <span class="cal-legend">
-            {% for key, label in constant('App\\Entity\\Absence::TYPES') %}<span><i class="cal-dot type-{{ key }}"></i>{{ label }}</span>{% endfor %}
+            {% for key, label in choices('absence_type') %}<span><i class="cal-dot type-{{ key }}"></i>{{ label }}</span>{% endfor %}
             <span><i class="cal-dot pending"></i>en attente</span>
         </span>
     </div>

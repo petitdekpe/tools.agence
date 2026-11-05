@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\MissionRepository;
+use App\Service\Choices;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -139,7 +140,7 @@ class Mission
         if ($this->dateDebut && $this->dateFin && $this->dateFin < $this->dateDebut) {
             $context->buildViolation('La date de fin est antérieure à la date de début.')->atPath('dateFin')->addViolation();
         }
-        if (null !== $this->resultat && !isset(self::RESULTATS[$this->resultat])) {
+        if (null !== $this->resultat && !Choices::has('mission_resultat', $this->resultat)) {
             $context->buildViolation('Résultat invalide.')->atPath('resultat')->addViolation();
         }
     }
@@ -372,7 +373,7 @@ class Mission
 
     public function getResultatLabel(): ?string
     {
-        return null === $this->resultat ? null : (self::RESULTATS[$this->resultat] ?? $this->resultat);
+        return null === $this->resultat ? null : Choices::labelOf('mission_resultat', $this->resultat);
     }
 
     public function getCompteRendu(): ?string

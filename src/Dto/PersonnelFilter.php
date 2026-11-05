@@ -2,7 +2,7 @@
 
 namespace App\Dto;
 
-use App\Entity\Personnel;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Recherche, filtres, tri et page de la liste du personnel, lus dans la query string. */
@@ -27,7 +27,7 @@ final class PersonnelFilter
         $filter->statut = isset(self::STATUSES[$statut]) ? $statut : null;
         $filter->service = mb_substr(trim((string) $request->query->get('service')), 0, 120);
         $contrat = (string) $request->query->get('contrat');
-        $filter->contrat = isset(Personnel::CONTRACTS[$contrat]) ? $contrat : null;
+        $filter->contrat = Choices::has('personnel_contract', $contrat) ? $contrat : null;
         $sort = (string) $request->query->get('sort');
         $filter->sort = \in_array($sort, self::SORTS, true) ? $sort : 'nom';
         $filter->dir = 'desc' === $request->query->get('dir') ? 'desc' : 'asc';

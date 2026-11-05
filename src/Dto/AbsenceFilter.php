@@ -3,6 +3,7 @@
 namespace App\Dto;
 
 use App\Entity\Absence;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Filtres, tri et page de la liste des absences, lus dans la query string. */
@@ -24,7 +25,7 @@ final class AbsenceFilter
         $etat = (string) $request->query->get('etat');
         $filter->etat = isset(Absence::STATUTS[$etat]) ? $etat : null;
         $type = (string) $request->query->get('type');
-        $filter->type = isset(Absence::TYPES[$type]) ? $type : null;
+        $filter->type = Choices::has('absence_type', $type) ? $type : null;
         $filter->personnel = self::int($request, 'personnel') ?: null;
         $year = self::int($request, 'annee');
         $filter->annee = $year >= 2000 && $year <= 2100 ? $year : null;

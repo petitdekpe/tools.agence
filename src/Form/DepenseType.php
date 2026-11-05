@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Depense;
+use App\Service\Choices;
 use App\Service\EncaissementCalculator;
 use App\Service\FiscalSettings;
 use Symfony\Component\Form\AbstractType;
@@ -23,7 +24,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class DepenseType extends AbstractType
 {
-    public function __construct(private readonly EncaissementCalculator $calculator, private readonly FiscalSettings $settings)
+    public function __construct(private readonly EncaissementCalculator $calculator, private readonly FiscalSettings $settings, private readonly Choices $choices)
     {
     }
 
@@ -41,7 +42,7 @@ class DepenseType extends AbstractType
                 'label' => 'Fournisseur',
                 'attr' => ['maxlength' => 160, 'list' => 'fournisseurs', 'autocomplete' => 'off'],
             ])
-            ->add('categorie', ChoiceType::class, ['label' => 'Catégorie', 'choices' => array_flip(Depense::CATEGORIES)])
+            ->add('categorie', ChoiceType::class, ['label' => 'Catégorie', 'choices' => array_flip($this->choices->labels('depense_categorie'))])
             ->add('libelle', TextType::class, ['label' => 'Libellé', 'attr' => ['maxlength' => 160, 'placeholder' => 'Ex. Location du studio, mars']])
             ->add('numeroPiece', TextType::class, ['label' => 'N° de facture ou de reçu', 'required' => false, 'attr' => ['maxlength' => 60]])
             ->add('montantTtc', NumberType::class, [
@@ -77,7 +78,7 @@ class DepenseType extends AbstractType
                 'label' => 'Mode de paiement',
                 'required' => false,
                 'placeholder' => 'Non payée',
-                'choices' => array_flip(Depense::MODES),
+                'choices' => array_flip($this->choices->labels('depense_mode')),
             ])
             ->add('observation', TextareaType::class, ['label' => 'Observation', 'required' => false, 'attr' => ['rows' => 3, 'maxlength' => 2000]]);
 

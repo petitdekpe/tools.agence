@@ -58,6 +58,7 @@
                 <tr>
                     {{ _self.sort('designation', 'Désignation', filter) }}
                     {{ _self.sort('categorie', 'Catégorie', filter) }}
+                    <th class="right">Qté</th>
                     {{ _self.sort('reference', 'Référence', filter) }}
                     {{ _self.sort('etat', 'État', filter) }}
                     {{ _self.sort('detenteur', 'Détenteur', filter) }}
@@ -72,6 +73,7 @@
                 <tr class="{{ m.reformed ? 'inactive' }}">
                     <td><a href="{{ path('app_materiel_show', {id: m.id}) }}"><strong>{{ m.designation }}</strong></a></td>
                     <td>{{ m.categoryLabel }}</td>
+                    <td class="right">{{ m.quantity }}</td>
                     <td>{{ m.reference ?: '—' }}</td>
                     <td>
                         {% if m.etat == 'panne' %}<span class="chip chip-bad">{{ m.etatLabel }}</span>
@@ -96,13 +98,13 @@
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="8" class="muted">Aucun matériel{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
+                <tr><td colspan="9" class="muted">Aucun matériel{% if filter.isActive %} pour ces filtres{% endif %}.</td></tr>
             {% endfor %}
             </tbody>
             {% if totals.n > 0 %}
                 <tfoot>
                     <tr>
-                        <td colspan="4">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
+                        <td colspan="5">Total{% if filter.isActive %} (filtres actifs){% endif %} · {{ totals.n }} matériel{{ totals.n > 1 ? 's' }}</td>
                         <td>{{ totals.assigned }} affecté{{ totals.assigned > 1 ? 's' }}</td>
                         <td></td>
                         <td class="num">{{ totals.value|fcfa_number }}</td>

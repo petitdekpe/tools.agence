@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Dto\TicketFilter;
 use App\Entity\Materiel;
 use App\Entity\Ticket;
+use App\Service\Choices;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -12,9 +13,6 @@ use Doctrine\Persistence\ManagerRegistry;
 /** Toutes les requêtes ignorent les tickets supprimés (suppression logique). */
 class TicketRepository extends ServiceEntityRepository
 {
-    /** Tri par gravité : urgente en premier quand on trie « priorité » par ordre décroissant. */
-    private const PRIORITY_RANK = "CASE t.priorite WHEN 'urgente' THEN 4 WHEN 'haute' THEN 3 WHEN 'normale' THEN 2 ELSE 1 END";
-
     private const SORT_EXPRESSIONS = [
         'date' => 't.createdAt',
         'reference' => 't.reference',
@@ -23,9 +21,20 @@ class TicketRepository extends ServiceEntityRepository
         'statut' => 't.statut',
     ];
 
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly Choices $choices)
     {
         parent::__construct($registry, Ticket::class);
+    }
+
+    /** Tri par gravité d'après l'ordre de la liste des priorités (de la moins à la plus urgente) : urgente en premier quand on trie « priorité » par ordre décroissant. */
+    private function priorityRank(): string
+    {
+        $cases = '';
+        foreach (array_keys($this->choices->labels('ticket_priorite')) as $i => $code) {
+            $cases .= sprintf("WHEN '%s' THEN %d ", str_replace("'", "''", (string) $code), $i + 1);
+        }
+
+        return 'CASE t.priorite '.$cases.'ELSE 0 END';
     }
 
     public function findActive(int $id): ?Ticket
@@ -38,7 +47,7 @@ class TicketRepository extends ServiceEntityRepository
     public function paginate(TicketFilter $filter, int $perPage): array
     {
         $total = (int) $this->filtered($filter)->select('COUNT(t.id)')->getQuery()->getSingleScalarResult();
-        $rows = $this->filtered($filter)->addSelect(self::PRIORITY_RANK.' AS HIDDEN prank')
+        $rows = $this->filtered($filter)->addSelect($this->priorityRank().' AS HIDDEN prank')
             ->orderBy(self::SORT_EXPRESSIONS[$filter->sort], 'asc' === $filter->dir ? 'ASC' : 'DESC')->addOrderBy('t.id', 'DESC')
             ->setFirstResult(($filter->page - 1) * $perPage)->setMaxResults($perPage)
             ->getQuery()->getResult();

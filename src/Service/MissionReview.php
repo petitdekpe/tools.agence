@@ -8,6 +8,7 @@ use App\Entity\Projet;
 use App\Entity\Tache;
 use App\Repository\MissionRepository;
 use App\Repository\TacheRepository;
+use App\Service\Choices;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -21,6 +22,7 @@ class MissionReview
         private readonly MissionRepository $missions,
         private readonly TacheRepository $tasks,
         private readonly EntityManagerInterface $em,
+        private readonly Choices $choices,
     ) {
     }
 
@@ -39,7 +41,7 @@ class MissionReview
         $missions = $this->missions->startingBetween($from, $to);
 
         $byStatus = array_fill_keys(array_keys(Mission::STATUTS), 0);
-        $byResult = array_fill_keys(array_keys(Mission::RESULTATS), 0);
+        $byResult = array_fill_keys(array_keys($this->choices->labels('mission_resultat')), 0);
         $noResult = $fieldDays = $toClose = $upcoming = 0;
         $people = [];
         $projects = [];

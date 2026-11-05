@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\TicketRepository;
+use App\Service\Choices;
+use App\Validator\ChoiceOf;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -83,7 +85,7 @@ class Ticket
     private ?string $categorie = null;
 
     #[ORM\Column(length: 10)]
-    #[Assert\Choice(choices: ['basse', 'normale', 'haute', 'urgente'], message: 'Priorité invalide.')]
+    #[ChoiceOf('ticket_priorite', message: 'Priorité invalide.')]
     private string $priorite = 'normale';
 
     #[ORM\Column(length: 20)]
@@ -133,7 +135,7 @@ class Ticket
         if ($this->isPanne() && $this->materiel?->isReformed()) {
             $context->buildViolation('Cet équipement est réformé.')->atPath('materiel')->addViolation();
         }
-        if ($this->isDemande() && null !== $this->categorie && !isset(Materiel::CATEGORIES[$this->categorie])) {
+        if ($this->isDemande() && null !== $this->categorie && !Choices::has('materiel_category', $this->categorie)) {
             $context->buildViolation('Catégorie invalide.')->atPath('categorie')->addViolation();
         }
         if (self::REJETE === $this->statut && '' === trim((string) $this->resolution)) {
@@ -229,7 +231,7 @@ class Ticket
 
     public function getCategorieLabel(): ?string
     {
-        return null === $this->categorie ? null : (Materiel::CATEGORIES[$this->categorie] ?? $this->categorie);
+        return null === $this->categorie ? null : Choices::labelOf('materiel_category', $this->categorie);
     }
 
     public function getPriorite(): string
@@ -246,7 +248,7 @@ class Ticket
 
     public function getPrioriteLabel(): string
     {
-        return self::PRIORITES[$this->priorite] ?? $this->priorite;
+        return Choices::labelOf('ticket_priorite', $this->priorite) ?? $this->priorite;
     }
 
     public function getStatut(): string

@@ -86,6 +86,9 @@ class ActivityLog
         'role.create' => 'Rôle créé',
         'role.update' => 'Rôle modifié',
         'role.delete' => 'Rôle supprimé',
+        'choice.create' => 'Valeur de liste ajoutée',
+        'choice.update' => 'Valeur de liste renommée',
+        'choice.delete' => 'Valeur de liste supprimée',
     ];
 
     public const CATEGORIES = [
@@ -109,6 +112,7 @@ class ActivityLog
         'materiel' => 'Matériel',
         'permissions' => 'Permissions',
         'role' => 'Rôles',
+        'choice' => 'Listes de choix',
     ];
 
     #[ORM\Id]

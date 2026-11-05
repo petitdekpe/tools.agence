@@ -3,6 +3,7 @@
 namespace App\Dto;
 
 use App\Entity\Ticket;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Type, recherche, filtres, tri et page de la liste des pannes et demandes, lus dans la query string. */
@@ -30,7 +31,7 @@ final class TicketFilter
         $etat = (string) $request->query->get('etat');
         $filter->etat = isset(self::ETATS[$etat]) ? $etat : null;
         $priorite = (string) $request->query->get('priorite');
-        $filter->priorite = isset(Ticket::PRIORITES[$priorite]) ? $priorite : null;
+        $filter->priorite = Choices::has('ticket_priorite', $priorite) ? $priorite : null;
         $sort = (string) $request->query->get('sort');
         $filter->sort = \in_array($sort, self::SORTS, true) ? $sort : 'date';
         $filter->dir = 'asc' === $request->query->get('dir') ? 'asc' : 'desc';

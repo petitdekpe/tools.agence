@@ -2,7 +2,7 @@
 
 namespace App\Dto;
 
-use App\Entity\Encaissement;
+use App\Service\Choices;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Filtres, tri et page de la liste des encaissements, lus dans la query string (liste, exports et synthèse). */
@@ -30,7 +30,7 @@ final class EncaissementFilter
         $filter->to = self::date($request->query->get('to'));
         $filter->client = $request->query->getInt('client') ?: null;
         $nature = (string) $request->query->get('nature');
-        $filter->nature = isset(Encaissement::NATURES[$nature]) ? $nature : null;
+        $filter->nature = Choices::has('encaissement_nature', $nature) ? $nature : null;
         $mode = (string) $request->query->get('mode');
         $filter->mode = isset(self::MODES[$mode]) ? $mode : null;
         $coherence = (string) $request->query->get('coherence');
